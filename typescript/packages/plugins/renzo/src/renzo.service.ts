@@ -3,8 +3,8 @@ import type { EVMWalletClient } from "@goat-sdk/wallet-evm";
 import { RENZO_ABI } from "./abi/renzo";
 import { EZETH_ABI } from "./abi/ezeth";
 import type { ChainSpecifications } from "./types/ChainSpecifications";
-import { depositSchema, depositETHSchema } from "./parameters";
-import { parseUnits } from "viem";
+import { depositSchema, depositETHSchema, balanceOfSchema } from "./parameters";
+import { parseUnits, formatUnits } from "viem";
 import { z } from "zod";
 
 export class RenzoService {
@@ -74,6 +74,29 @@ export class RenzoService {
             return hash.hash;
         } catch (error) {
             throw Error(`Failed to deposit ETH: ${error}`);
+        }
+    }
+
+    @Tool({
+        name: "renzo_check_ezeth_balance",
+        description: "Check the ezETH balance of an address",
+    })
+    async getEzEthBalance(
+        walletClient: EVMWalletClient,
+        spec: ChainSpecifications,
+        parameters: z.infer<typeof balanceOfSchema>
+    ): Promise<string> {
+        try {
+            const balance = await walletClient.read({
+                address: spec[walletClient.getChain().id].l2EzEthAddress,
+                abi: EZETH_ABI,
+                functionName: "balanceOf",
+                args: [parameters._address],
+            });
+
+            return formatUnits(balance as unknown as bigint, 18);
+        } catch (error) {
+            throw Error(`Failed to get ezETH balance: ${error}`);
         }
     }
 }
