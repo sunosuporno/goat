@@ -3,7 +3,7 @@ import type { EVMWalletClient } from "@goat-sdk/wallet-evm";
 import { RENZO_ABI } from "./abi/renzo";
 import { EZETH_ABI } from "./abi/ezeth";
 import type { ChainSpecifications } from "./types/ChainSpecifications";
-import { depositSchema } from "./parameters";
+import { depositSchema, depositETHSchema } from "./parameters";
 import { parseUnits } from "viem";
 import { z } from "zod";
 
@@ -48,6 +48,32 @@ export class RenzoService {
             return hash.hash;
         } catch (error) {
             throw Error(`Failed to deposit ERC20: ${error}`);
+        }
+    }
+
+    @Tool({
+        name: "renzo_deposit_eth",
+        description: "Deposit ETH into Renzo",
+    })
+    async depositETH(
+        walletClient: EVMWalletClient,
+        spec: ChainSpecifications,
+        parameters: z.infer<typeof depositETHSchema>
+    ): Promise<string> {
+        try {
+            const _minOut = parseUnits(parameters._minOut, 18);
+
+            const hash = await walletClient.sendTransaction({
+                to: spec[walletClient.getChain().id].renzoDepositAddress,
+                abi: RENZO_ABI,
+                functionName: "depositETH",
+                args: [_minOut, parameters._deadline],
+                value: parseUnits(parameters._value, 18),
+            });
+
+            return hash.hash;
+        } catch (error) {
+            throw Error(`Failed to deposit ETH: ${error}`);
         }
     }
 }

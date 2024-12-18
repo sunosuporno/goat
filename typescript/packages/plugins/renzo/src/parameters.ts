@@ -10,6 +10,7 @@ export const depositSchema = z.object({
 export const depositETHSchema = z.object({
     _minOut: z.string().describe("The minimum amount of ETH to receive"),
     _deadline: z.string().describe("The deadline for the deposit"),
+    _value: z.string().describe("The amount of ETH to send"),
 });
 
 export const balanceOfSchema = z.object({
