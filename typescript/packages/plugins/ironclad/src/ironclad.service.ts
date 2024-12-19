@@ -271,6 +271,83 @@ export class IroncladService {
     }
 
     @Tool({
+        name: "ironclad_monitor_loop_position",
+        description: "Monitor health of a looped position on Ironclad",
+    })
+    async monitorLoopPosition(
+        walletClient: EVMWalletClient,
+        parameters: MonitorPositionParameters
+    ): Promise<{
+        totalCollateral: string;
+        totalBorrowed: string;
+        currentLTV: string;
+        healthFactor: string;
+        liquidationThreshold: string;
+    }> {
+        try {
+            const asset = await walletClient.resolveAddress(
+                parameters.collateralToken
+            );
+            const decimals = Number(
+                await walletClient.read({
+                    address: asset as `0x${string}`,
+                    abi: ERC20_ABI,
+                    functionName: "decimals",
+                })
+            );
+
+            // Get user's reserve data
+            const userReserveData = (await walletClient.read({
+                address: PROTOCOL_DATA_PROVIDER_ADDRESS,
+                abi: PROTOCOL_DATA_PROVIDER_ABI,
+                functionName: "getUserReserveData",
+                args: [asset, walletClient.getAddress()],
+            })) as unknown as any[];
+
+            // Get reserve configuration
+            const reserveConfig = (await walletClient.read({
+                address: PROTOCOL_DATA_PROVIDER_ADDRESS,
+                abi: PROTOCOL_DATA_PROVIDER_ABI,
+                functionName: "getReserveConfigurationData",
+                args: [asset],
+            })) as unknown as any[];
+
+            const totalCollateral = formatUnits(userReserveData[0], decimals);
+            const totalBorrowed = formatUnits(userReserveData[2], decimals);
+            const liquidationThreshold = Number(reserveConfig[2]) / 10000; // Convert from bps
+
+            // Calculate current LTV and health factor
+            const currentLTV =
+                totalBorrowed === "0"
+                    ? "0"
+                    : (
+                          (Number(totalBorrowed) / Number(totalCollateral)) *
+                          100
+                      ).toFixed(2);
+
+            const healthFactor =
+                totalBorrowed === "0"
+                    ? "∞"
+                    : (
+                          (Number(totalCollateral) * liquidationThreshold) /
+                          Number(totalBorrowed)
+                      ).toFixed(2);
+
+            return {
+                totalCollateral,
+                totalBorrowed,
+                currentLTV: `${currentLTV}%`,
+                healthFactor,
+                liquidationThreshold: `${(liquidationThreshold * 100).toFixed(
+                    2
+                )}%`,
+            };
+        } catch (error) {
+            throw Error(`Failed to monitor loop position: ${error}`);
+        }
+    }
+
+    @Tool({
         name: "ironclad_borrow_iusd",
         description: "Deposit collateral and borrow iUSD against it",
     })
