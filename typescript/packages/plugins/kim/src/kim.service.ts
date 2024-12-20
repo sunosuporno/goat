@@ -43,29 +43,15 @@ export class KimService {
         parameters: ExactInputSingleParams
     ) {
         try {
-            console.log("\n🔄 Executing Single Hop Swap");
-            console.log("-------------------");
-            console.log("📍 Token In:", parameters.tokenInAddress);
-            console.log("📍 Token Out:", parameters.tokenOutAddress);
-            console.log("📍 Amount In:", parameters.amountIn);
-            console.log("📍 Min Amount Out:", parameters.amountOutMinimum);
-
-            console.log("📝 Approving tokens...");
             const approvalHash = await walletClient.sendTransaction({
                 to: parameters.tokenInAddress as `0x${string}`,
                 abi: ERC20_ABI,
                 functionName: "approve",
                 args: [SWAP_ROUTER_ADDRESS, parameters.amountIn],
             });
-            console.log("✅ Approval Hash:", approvalHash.hash);
 
             const timestamp =
                 Math.floor(Date.now() / 1000) + parameters.deadline;
-
-            console.log(
-                "📍 Deadline:",
-                new Date(timestamp * 1000).toISOString()
-            );
 
             const hash = await walletClient.sendTransaction({
                 to: SWAP_ROUTER_ADDRESS,
@@ -84,10 +70,8 @@ export class KimService {
                 ],
             });
 
-            console.log("✅ Transaction Hash:", hash.hash);
             return hash.hash;
         } catch (error) {
-            console.log("❌ Swap Failed:", error);
             throw Error(`Failed to swap exact input single hop: ${error}`);
         }
     }
@@ -102,15 +86,6 @@ export class KimService {
         parameters: ExactOutputSingleParams
     ): Promise<string> {
         try {
-            console.log("\n🔄 Executing Single Hop Exact Output Swap");
-            console.log("-------------------");
-            console.log("📍 Token In:", parameters.tokenInAddress);
-            console.log("📍 Token Out:", parameters.tokenOutAddress);
-            console.log("📍 Amount Out:", parameters.amountOut);
-            console.log("📍 Max Amount In:", parameters.amountInMaximum);
-            console.log("📍 Limit Sqrt Price:", parameters.limitSqrtPrice);
-            console.log("📍 Deadline:", parameters.deadline);
-
             const tokenIn = parameters.tokenInAddress;
             const tokenOut = parameters.tokenOutAddress;
 
@@ -120,19 +95,12 @@ export class KimService {
             const timestamp =
                 Math.floor(Date.now() / 1000) + parameters.deadline;
 
-            console.log(
-                "📍 Deadline:",
-                new Date(timestamp * 1000).toISOString()
-            );
-
-            console.log("📝 Approving tokens...");
             const approvalHash = await walletClient.sendTransaction({
                 to: parameters.tokenInAddress as `0x${string}`,
                 abi: ERC20_ABI,
                 functionName: "approve",
                 args: [SWAP_ROUTER_ADDRESS, amountInMaximum],
             });
-            console.log("✅ Approval Hash:", approvalHash.hash);
 
             const hash = await walletClient.sendTransaction({
                 to: SWAP_ROUTER_ADDRESS,
@@ -151,10 +119,8 @@ export class KimService {
                 ],
             });
 
-            console.log("✅ Transaction Hash:", hash.hash);
             return hash.hash;
         } catch (error) {
-            console.log("❌ Swap Failed:", error);
             throw Error(`Failed to swap exact output single hop: ${error}`);
         }
     }
@@ -298,12 +264,8 @@ export class KimService {
         parameters: MintParams
     ): Promise<string> {
         try {
-            console.log("\n🏭 Minting New Position");
-            console.log("-------------------");
-
             const tickSpacing = 60;
             const recipient = walletClient.getAddress();
-            console.log("📍 Recipient:", recipient);
 
             // First determine token order
             const isOrderMatched =
@@ -319,8 +281,6 @@ export class KimService {
                 ? [parameters.amount0Desired, parameters.amount1Desired]
                 : [parameters.amount1Desired, parameters.amount0Desired];
 
-            console.log("\n🔍 Getting Pool Info");
-            console.log("-------------------");
             const poolAddressResult = await walletClient.read({
                 address: FACTORY_ADDRESS as `0x${string}`,
                 abi: KIM_FACTORY_ABI,
@@ -328,18 +288,14 @@ export class KimService {
                 args: [token0, token1],
             });
             const poolAddress = (poolAddressResult as { value: string }).value;
-            console.log("📍 Pool Address:", poolAddress);
 
-            console.log("\n📊 Getting Global State");
             const globalState = await walletClient.read({
                 address: poolAddress as `0x${string}`,
                 abi: POOL_ABI,
                 functionName: "globalState",
             });
-            console.log("📍 Global State:", globalState);
             const globalStateArray = (globalState as { value: any[] }).value;
             const currentTick = parseInt(globalStateArray[1].toString());
-            console.log("📍 Current Tick:", currentTick);
 
             // Calculate nearest tick that's divisible by spacing
             const nearestTick =
@@ -349,19 +305,12 @@ export class KimService {
             const tickLower = nearestTick - tickSpacing * 5; // 300 ticks below
             const tickUpper = nearestTick + tickSpacing * 5; // 300 ticks above
 
-            console.log("📍 Nearest Tick:", nearestTick);
-            console.log("📍 Tick Lower:", tickLower);
-            console.log("📍 Tick Upper:", tickUpper);
-
-            console.log("\n📝 Approving Tokens");
-            console.log("-------------------");
             const approvalHash0 = await walletClient.sendTransaction({
                 to: token0 as `0x${string}`,
                 abi: ERC20_ABI,
                 functionName: "approve",
                 args: [POSITION_MANAGER_ADDRESS, amount0Raw],
             });
-            console.log("✅ Token0 Approval Hash:", approvalHash0.hash);
 
             const approvalHash1 = await walletClient.sendTransaction({
                 to: token1 as `0x${string}`,
@@ -369,7 +318,6 @@ export class KimService {
                 functionName: "approve",
                 args: [POSITION_MANAGER_ADDRESS, amount1Raw],
             });
-            console.log("✅ Token1 Approval Hash:", approvalHash1.hash);
 
             // Add timestamp calculation
             const timestamp =
@@ -379,8 +327,6 @@ export class KimService {
                 new Date(timestamp * 1000).toISOString()
             );
 
-            console.log("\n🔨 Minting Position");
-            console.log("-------------------");
             const hash = await walletClient.sendTransaction({
                 to: POSITION_MANAGER_ADDRESS,
                 abi: POSITION_MANAGER_ABI,
@@ -401,14 +347,8 @@ export class KimService {
                 ],
             });
 
-            console.log("\n✅ Mint Successful");
-            console.log("-------------------");
-            console.log("Transaction Hash:", hash.hash);
             return hash.hash;
         } catch (error) {
-            console.log("\n❌ Mint Failed");
-            console.log("-------------------");
-            console.error("Error Details:", error);
             throw new Error(`Failed to mint position: ${error}`);
         }
     }
@@ -423,9 +363,6 @@ export class KimService {
         parameters: IncreaseLiquidityParams
     ): Promise<string> {
         try {
-            console.log("\n🔄 Increasing Liquidity");
-            console.log("-------------------");
-
             // Set tokens and amounts in correct order
             const isOrderMatched =
                 parameters.token0Address.toLowerCase() <
@@ -439,18 +376,12 @@ export class KimService {
                 ? [parameters.amount0Desired, parameters.amount1Desired]
                 : [parameters.amount1Desired, parameters.amount0Desired];
 
-            console.log("📍 Token0:", token0, "Amount:", amount0Raw);
-            console.log("📍 Token1:", token1, "Amount:", amount1Raw);
-
-            console.log("\n📝 Approving Tokens");
-            console.log("-------------------");
             const approvalHash0 = await walletClient.sendTransaction({
                 to: token0 as `0x${string}`,
                 abi: ERC20_ABI,
                 functionName: "approve",
                 args: [POSITION_MANAGER_ADDRESS, amount0Raw],
             });
-            console.log("✅ Token0 Approval Hash:", approvalHash0.hash);
 
             const approvalHash1 = await walletClient.sendTransaction({
                 to: token1 as `0x${string}`,
@@ -458,20 +389,10 @@ export class KimService {
                 functionName: "approve",
                 args: [POSITION_MANAGER_ADDRESS, amount1Raw],
             });
-            console.log("✅ Token1 Approval Hash:", approvalHash1.hash);
 
             // Calculate deadline as current time + deadline seconds
             const timestamp = Math.floor(Date.now() / 1000) + 60; // 60 seconds from now
-            console.log("\n⏰ Deadline Info:");
-            console.log("Current Time:", Math.floor(Date.now() / 1000));
-            console.log("Deadline:", timestamp);
-            console.log(
-                "Deadline Date:",
-                new Date(timestamp * 1000).toISOString()
-            );
 
-            console.log("\n🔨 Increasing Position");
-            console.log("-------------------");
             const hash = await walletClient.sendTransaction({
                 to: POSITION_MANAGER_ADDRESS,
                 abi: POSITION_MANAGER_ABI,
@@ -488,14 +409,8 @@ export class KimService {
                 ],
             });
 
-            console.log("\n✅ Increase Successful");
-            console.log("-------------------");
-            console.log("Transaction Hash:", hash.hash);
             return hash.hash;
         } catch (error) {
-            console.log("\n❌ Increase Failed");
-            console.log("-------------------");
-            console.error("Error Details:", error);
             throw new Error(`Failed to increase liquidity: ${error}`);
         }
     }
@@ -510,11 +425,6 @@ export class KimService {
         parameters: DecreaseLiquidityParams
     ): Promise<string> {
         try {
-            console.log("\n📉 Decreasing Liquidity");
-            console.log("-------------------");
-            console.log("📍 Token ID:", parameters.tokenId);
-            console.log("📍 Percentage to Remove:", parameters.percentage, "%");
-
             // Get position info
             const positionResult = await walletClient.read({
                 address: POSITION_MANAGER_ADDRESS as `0x${string}`,
@@ -529,21 +439,9 @@ export class KimService {
                 (currentLiquidity * BigInt(parameters.percentage)) /
                 BigInt(100);
 
-            console.log("\n🧮 Calculations:");
-            console.log("📍 Current Liquidity:", currentLiquidity.toString());
-            console.log(
-                "📍 Liquidity to Remove:",
-                liquidityToRemove.toString()
-            );
-            console.log("📍 Removal Percentage:", `${parameters.percentage}%`);
-
             // Set min amounts to 0 for now
             const amount0Min = 0n;
             const amount1Min = 0n;
-
-            console.log("\n🔒 Slippage Protection:");
-            console.log("Amount0 Min:", amount0Min.toString());
-            console.log("Amount1 Min:", amount1Min.toString());
 
             const timestamp = Math.floor(Date.now() / 1000) + 60;
 
@@ -562,12 +460,8 @@ export class KimService {
                 ],
             });
 
-            console.log("\n✅ Decrease Successful");
-            console.log("Transaction Hash:", hash.hash);
             return hash.hash;
         } catch (error) {
-            console.log("\n❌ Decrease Failed");
-            console.error("Error Details:", error);
             throw new Error(`Failed to decrease liquidity: ${error}`);
         }
     }
