@@ -132,8 +132,12 @@ export class MintParams extends createToolParameters(
 
 export class IncreaseLiquidityParams extends createToolParameters(
     z.object({
-        token0: z.string().describe("The first token in the pair"),
-        token1: z.string().describe("The second token in the pair"),
+        token0Address: z
+            .string()
+            .describe("The address of the first token in the pair"),
+        token1Address: z
+            .string()
+            .describe("The address of the second token in the pair"),
         tokenId: z.string().describe("The token id of the liquidity"),
         amount0Desired: z.string().describe("The amount of token0 to add"),
         amount1Desired: z.string().describe("The amount of token1 to add"),
@@ -145,17 +149,21 @@ export class IncreaseLiquidityParams extends createToolParameters(
 
 export class DecreaseLiquidityParams extends createToolParameters(
     z.object({
-        token0: z.string().describe("The first token in the pair"),
-        token1: z.string().describe("The second token in the pair"),
         tokenId: z.string().describe("The token id of the liquidity"),
-        liquidity: z.string().describe("The amount of liquidity to remove"),
+        percentage: z
+            .number()
+            .min(1)
+            .max(100)
+            .describe("The percentage of liquidity to remove (1-100)"),
         amount0Min: z
             .string()
+            .optional()
             .describe("The minimum amount of token0 to remove"),
         amount1Min: z
             .string()
+            .optional()
             .describe("The minimum amount of token1 to remove"),
-        deadline: z.number().describe("The deadline for the swap"),
+        deadline: z.number().describe("The deadline for the transaction"),
     })
 ) {}
 

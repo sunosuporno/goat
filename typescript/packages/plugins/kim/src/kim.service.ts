@@ -415,30 +415,63 @@ export class KimService {
 
     @Tool({
         name: "kim_increase_liquidity",
-        description: "Increase liquidity in an existing position",
+        description:
+            "Increase liquidity in an existing position. Returns a transaction hash on success. Once you get a transaction hash, the increase is complete - do not call this function again.",
     })
     async increaseLiquidity(
         walletClient: EVMWalletClient,
         parameters: IncreaseLiquidityParams
     ): Promise<string> {
         try {
-            const [token0Decimals, token1Decimals] = await Promise.all([
-                Number(
-                    await walletClient.read({
-                        address: parameters.token0 as `0x${string}`,
-                        abi: ERC20_ABI,
-                        functionName: "decimals",
-                    })
-                ),
-                Number(
-                    await walletClient.read({
-                        address: parameters.token1 as `0x${string}`,
-                        abi: ERC20_ABI,
-                        functionName: "decimals",
-                    })
-                ),
-            ]);
+            console.log("\n🔄 Increasing Liquidity");
+            console.log("-------------------");
 
+            // Set tokens and amounts in correct order
+            const isOrderMatched =
+                parameters.token0Address.toLowerCase() <
+                parameters.token1Address.toLowerCase();
+
+            const [token0, token1] = isOrderMatched
+                ? [parameters.token0Address, parameters.token1Address]
+                : [parameters.token1Address, parameters.token0Address];
+
+            const [amount0Raw, amount1Raw] = isOrderMatched
+                ? [parameters.amount0Desired, parameters.amount1Desired]
+                : [parameters.amount1Desired, parameters.amount0Desired];
+
+            console.log("📍 Token0:", token0, "Amount:", amount0Raw);
+            console.log("📍 Token1:", token1, "Amount:", amount1Raw);
+
+            console.log("\n📝 Approving Tokens");
+            console.log("-------------------");
+            const approvalHash0 = await walletClient.sendTransaction({
+                to: token0 as `0x${string}`,
+                abi: ERC20_ABI,
+                functionName: "approve",
+                args: [POSITION_MANAGER_ADDRESS, amount0Raw],
+            });
+            console.log("✅ Token0 Approval Hash:", approvalHash0.hash);
+
+            const approvalHash1 = await walletClient.sendTransaction({
+                to: token1 as `0x${string}`,
+                abi: ERC20_ABI,
+                functionName: "approve",
+                args: [POSITION_MANAGER_ADDRESS, amount1Raw],
+            });
+            console.log("✅ Token1 Approval Hash:", approvalHash1.hash);
+
+            // Calculate deadline as current time + deadline seconds
+            const timestamp = Math.floor(Date.now() / 1000) + 60; // 60 seconds from now
+            console.log("\n⏰ Deadline Info:");
+            console.log("Current Time:", Math.floor(Date.now() / 1000));
+            console.log("Deadline:", timestamp);
+            console.log(
+                "Deadline Date:",
+                new Date(timestamp * 1000).toISOString()
+            );
+
+            console.log("\n🔨 Increasing Position");
+            console.log("-------------------");
             const hash = await walletClient.sendTransaction({
                 to: POSITION_MANAGER_ADDRESS,
                 abi: POSITION_MANAGER_ABI,
@@ -446,58 +479,73 @@ export class KimService {
                 args: [
                     {
                         tokenId: parameters.tokenId,
-                        amount0Desired: parseUnits(
-                            parameters.amount0Desired,
-                            token0Decimals
-                        ),
-                        amount1Desired: parseUnits(
-                            parameters.amount1Desired,
-                            token1Decimals
-                        ),
-                        amount0Min: parseUnits(
-                            parameters.amount0Min,
-                            token0Decimals
-                        ),
-                        amount1Min: parseUnits(
-                            parameters.amount1Min,
-                            token1Decimals
-                        ),
-                        deadline: parameters.deadline,
+                        amount0Desired: amount0Raw,
+                        amount1Desired: amount1Raw,
+                        amount0Min: 0n,
+                        amount1Min: 0n,
+                        deadline: timestamp,
                     },
                 ],
             });
 
+            console.log("\n✅ Increase Successful");
+            console.log("-------------------");
+            console.log("Transaction Hash:", hash.hash);
             return hash.hash;
         } catch (error) {
+            console.log("\n❌ Increase Failed");
+            console.log("-------------------");
+            console.error("Error Details:", error);
             throw new Error(`Failed to increase liquidity: ${error}`);
         }
     }
 
     @Tool({
         name: "kim_decrease_liquidity",
-        description: "Decrease liquidity in an existing position",
+        description:
+            "Decrease liquidity in an existing position by specifying a percentage (0-100). Returns a transaction hash on success. Once you get a transaction hash, the decrease is complete - do not call this function again.",
     })
     async decreaseLiquidity(
         walletClient: EVMWalletClient,
         parameters: DecreaseLiquidityParams
     ): Promise<string> {
         try {
-            const [token0Decimals, token1Decimals] = await Promise.all([
-                Number(
-                    await walletClient.read({
-                        address: parameters.token0 as `0x${string}`,
-                        abi: ERC20_ABI,
-                        functionName: "decimals",
-                    })
-                ),
-                Number(
-                    await walletClient.read({
-                        address: parameters.token1 as `0x${string}`,
-                        abi: ERC20_ABI,
-                        functionName: "decimals",
-                    })
-                ),
-            ]);
+            console.log("\n📉 Decreasing Liquidity");
+            console.log("-------------------");
+            console.log("📍 Token ID:", parameters.tokenId);
+            console.log("📍 Percentage to Remove:", parameters.percentage, "%");
+
+            // Get position info
+            const positionResult = await walletClient.read({
+                address: POSITION_MANAGER_ADDRESS as `0x${string}`,
+                abi: POSITION_MANAGER_ABI,
+                functionName: "positions",
+                args: [parameters.tokenId],
+            });
+            const position = (positionResult as { value: any[] }).value;
+
+            const currentLiquidity = position[6];
+            const liquidityToRemove =
+                (currentLiquidity * BigInt(parameters.percentage)) /
+                BigInt(100);
+
+            console.log("\n🧮 Calculations:");
+            console.log("📍 Current Liquidity:", currentLiquidity.toString());
+            console.log(
+                "📍 Liquidity to Remove:",
+                liquidityToRemove.toString()
+            );
+            console.log("📍 Removal Percentage:", `${parameters.percentage}%`);
+
+            // Set min amounts to 0 for now
+            const amount0Min = 0n;
+            const amount1Min = 0n;
+
+            console.log("\n🔒 Slippage Protection:");
+            console.log("Amount0 Min:", amount0Min.toString());
+            console.log("Amount1 Min:", amount1Min.toString());
+
+            const timestamp = Math.floor(Date.now() / 1000) + 60;
 
             const hash = await walletClient.sendTransaction({
                 to: POSITION_MANAGER_ADDRESS,
@@ -506,22 +554,20 @@ export class KimService {
                 args: [
                     {
                         tokenId: parameters.tokenId,
-                        liquidity: parseUnits(parameters.liquidity, 18), // Liquidity has 18 decimals
-                        amount0Min: parseUnits(
-                            parameters.amount0Min,
-                            token0Decimals
-                        ),
-                        amount1Min: parseUnits(
-                            parameters.amount1Min,
-                            token1Decimals
-                        ),
-                        deadline: parameters.deadline,
+                        liquidity: liquidityToRemove,
+                        amount0Min: amount0Min,
+                        amount1Min: amount1Min,
+                        deadline: timestamp,
                     },
                 ],
             });
 
+            console.log("\n✅ Decrease Successful");
+            console.log("Transaction Hash:", hash.hash);
             return hash.hash;
         } catch (error) {
+            console.log("\n❌ Decrease Failed");
+            console.error("Error Details:", error);
             throw new Error(`Failed to decrease liquidity: ${error}`);
         }
     }
