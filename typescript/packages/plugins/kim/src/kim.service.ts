@@ -574,33 +574,17 @@ export class KimService {
 
     @Tool({
         name: "kim_collect",
-        description: "Collect tokens from a liquidity position",
+        description:
+            "Collect all available tokens from a liquidity position. Can be rewards or tokens removed from a liquidity position. So, should be called after decreasing liquidity as well as on its own.",
     })
     async collect(
         walletClient: EVMWalletClient,
         parameters: CollectParams
     ): Promise<string> {
         try {
-            const recipient = await walletClient.resolveAddress(
-                parameters.recipient
-            );
-
-            const [token0Decimals, token1Decimals] = await Promise.all([
-                Number(
-                    await walletClient.read({
-                        address: parameters.token0 as `0x${string}`,
-                        abi: ERC20_ABI,
-                        functionName: "decimals",
-                    })
-                ),
-                Number(
-                    await walletClient.read({
-                        address: parameters.token1 as `0x${string}`,
-                        abi: ERC20_ABI,
-                        functionName: "decimals",
-                    })
-                ),
-            ]);
+            const recipient = walletClient.getAddress();
+            // Use max uint128 to collect all available tokens
+            const maxUint128 = BigInt(2 ** 128) - BigInt(1);
 
             const hash = await walletClient.sendTransaction({
                 to: POSITION_MANAGER_ADDRESS,
@@ -610,14 +594,8 @@ export class KimService {
                     {
                         tokenId: parameters.tokenId,
                         recipient,
-                        amount0Max: parseUnits(
-                            parameters.amount0Max,
-                            token0Decimals
-                        ),
-                        amount1Max: parseUnits(
-                            parameters.amount1Max,
-                            token1Decimals
-                        ),
+                        amount0Max: maxUint128,
+                        amount1Max: maxUint128,
                     },
                 ],
             });
@@ -631,7 +609,7 @@ export class KimService {
     @Tool({
         name: "kim_burn",
         description:
-            "Burn a liquidity position NFT after all tokens have been collected",
+            "Burn a liquidity position NFT after all tokens have been collected.",
     })
     async burn(
         walletClient: EVMWalletClient,

@@ -169,18 +169,11 @@ export class DecreaseLiquidityParams extends createToolParameters(
 
 export class CollectParams extends createToolParameters(
     z.object({
-        tokenId: z.string().describe("The token id of the liquidity"),
-        token0: z.string().describe("The first token in the pair"),
-        token1: z.string().describe("The second token in the pair"),
-        recipient: z
+        tokenId: z
             .string()
-            .describe("The address to receive the output tokens"),
-        amount0Max: z
-            .string()
-            .describe("The maximum amount of token0 to collect"),
-        amount1Max: z
-            .string()
-            .describe("The maximum amount of token1 to collect"),
+            .describe(
+                "The token id of the LP position whose tokens are being collected"
+            ),
     })
 ) {}
 
