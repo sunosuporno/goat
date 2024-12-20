@@ -265,7 +265,6 @@ export class KimService {
     ): Promise<string> {
         try {
             const tickSpacing = 60;
-            const recipient = walletClient.getAddress();
 
             // First determine token order
             const isOrderMatched =
@@ -302,8 +301,8 @@ export class KimService {
                 Math.floor(currentTick / tickSpacing) * tickSpacing;
 
             // Use provided ticks if they exist and are valid numbers
-            const tickLower = nearestTick - tickSpacing * 5; // 300 ticks below
-            const tickUpper = nearestTick + tickSpacing * 5; // 300 ticks above
+            const tickLower = nearestTick - tickSpacing * 10; // 600 ticks below
+            const tickUpper = nearestTick + tickSpacing * 10; // 600 ticks above
 
             const approvalHash0 = await walletClient.sendTransaction({
                 to: token0 as `0x${string}`,
@@ -322,10 +321,6 @@ export class KimService {
             // Add timestamp calculation
             const timestamp =
                 Math.floor(Date.now() / 1000) + parameters.deadline;
-            console.log(
-                "📍 Deadline:",
-                new Date(timestamp * 1000).toISOString()
-            );
 
             const hash = await walletClient.sendTransaction({
                 to: POSITION_MANAGER_ADDRESS,
@@ -341,7 +336,7 @@ export class KimService {
                         amount1Desired: amount1Raw,
                         amount0Min: 0,
                         amount1Min: 0,
-                        recipient,
+                        recipient: walletClient.getAddress(),
                         deadline: timestamp,
                     },
                 ],

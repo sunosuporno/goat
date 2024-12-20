@@ -123,9 +123,6 @@ export class MintParams extends createToolParameters(
         amount1Desired: z.string().describe("The amount of token1 to add"),
         amount0Min: z.string().describe("The minimum amount of token0 to add"),
         amount1Min: z.string().describe("The minimum amount of token1 to add"),
-        recipient: z
-            .string()
-            .describe("The address to receive the output tokens"),
         deadline: z.number().describe("The deadline for the swap"),
     })
 ) {}
