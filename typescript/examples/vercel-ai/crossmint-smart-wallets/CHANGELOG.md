@@ -1,5 +1,18 @@
 # goat-examples-vercel-ai-crossmint-smart-wallets
 
+## 0.2.6
+
+### Patch Changes
+
+- Updated dependencies [c565119]
+  - @goat-sdk/plugin-erc20@0.2.2
+
+## 0.2.5
+
+### Patch Changes
+
+- @goat-sdk/crossmint@0.3.5
+
 ## 0.2.4
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @goat-sdk/wallet-lit
 
+## 0.2.5
+
+### Patch Changes
+
+- 65ee1e8: Fix typo
+
+## 0.2.4
+
+### Patch Changes
+
+- Updated dependencies [de8533d]
+  - @goat-sdk/wallet-solana@0.2.4
+
 ## 0.2.3
 
 ### Patch Changes
