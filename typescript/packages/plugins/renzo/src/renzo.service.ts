@@ -3,9 +3,8 @@ import type { EVMWalletClient } from "@goat-sdk/wallet-evm";
 import { RENZO_ABI } from "./abi/renzo";
 import { EZETH_ABI } from "./abi/ezeth";
 import { getRenzoAddresses } from "./types/ChainSpecifications";
-import { depositSchema, depositETHSchema, balanceOfSchema } from "./parameters";
+import { DepositParams, DepositETHParams, BalanceOfParams } from "./parameters";
 import { parseUnits, formatUnits } from "viem";
-import { z } from "zod";
 
 export class RenzoService {
     constructor() {}
@@ -16,7 +15,7 @@ export class RenzoService {
     })
     async depositERC20(
         walletClient: EVMWalletClient,
-        parameters: z.infer<typeof depositSchema>
+        parameters: DepositParams
     ): Promise<string> {
         try {
             const { renzoDepositAddress } = getRenzoAddresses(
@@ -59,7 +58,7 @@ export class RenzoService {
     })
     async depositETH(
         walletClient: EVMWalletClient,
-        parameters: z.infer<typeof depositETHSchema>
+        parameters: DepositETHParams
     ): Promise<string> {
         try {
             const { renzoDepositAddress } = getRenzoAddresses(
@@ -87,7 +86,7 @@ export class RenzoService {
     })
     async getEzEthBalance(
         walletClient: EVMWalletClient,
-        parameters: z.infer<typeof balanceOfSchema>
+        parameters: BalanceOfParams
     ): Promise<string> {
         try {
             const { l2EzEthAddress } = getRenzoAddresses(
