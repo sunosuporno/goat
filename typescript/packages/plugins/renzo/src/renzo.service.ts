@@ -2,13 +2,13 @@ import { Tool } from "@goat-sdk/core";
 import type { EVMWalletClient } from "@goat-sdk/wallet-evm";
 import { RENZO_ABI } from "./abi/renzo";
 import { EZETH_ABI } from "./abi/ezeth";
-import type { ChainSpecifications } from "./types/ChainSpecifications";
+import { getRenzoAddresses } from "./types/ChainSpecifications";
 import { depositSchema, depositETHSchema, balanceOfSchema } from "./parameters";
 import { parseUnits, formatUnits } from "viem";
 import { z } from "zod";
 
 export class RenzoService {
-    constructor(private readonly chainSpecifications: ChainSpecifications) {}
+    constructor() {}
 
     @Tool({
         name: "renzo_deposit_erc20",
@@ -16,12 +16,14 @@ export class RenzoService {
     })
     async depositERC20(
         walletClient: EVMWalletClient,
-        spec: ChainSpecifications,
         parameters: z.infer<typeof depositSchema>
     ): Promise<string> {
         try {
+            const { renzoDepositAddress } = getRenzoAddresses(
+                walletClient.getChain().id
+            );
             const depositToken = await walletClient.read({
-                address: spec[walletClient.getChain().id].renzoDepositAddress,
+                address: renzoDepositAddress,
                 abi: RENZO_ABI,
                 functionName: "depositToken",
             });
@@ -39,7 +41,7 @@ export class RenzoService {
             const _minOut = parseUnits(parameters._minOut, 18);
 
             const hash = await walletClient.sendTransaction({
-                to: spec[walletClient.getChain().id].renzoDepositAddress,
+                to: renzoDepositAddress,
                 abi: RENZO_ABI,
                 functionName: "deposit",
                 args: [depositAmount, _minOut, parameters._deadline],
@@ -57,14 +59,16 @@ export class RenzoService {
     })
     async depositETH(
         walletClient: EVMWalletClient,
-        spec: ChainSpecifications,
         parameters: z.infer<typeof depositETHSchema>
     ): Promise<string> {
         try {
+            const { renzoDepositAddress } = getRenzoAddresses(
+                walletClient.getChain().id
+            );
             const _minOut = parseUnits(parameters._minOut, 18);
 
             const hash = await walletClient.sendTransaction({
-                to: spec[walletClient.getChain().id].renzoDepositAddress,
+                to: renzoDepositAddress,
                 abi: RENZO_ABI,
                 functionName: "depositETH",
                 args: [_minOut, parameters._deadline],
@@ -83,12 +87,14 @@ export class RenzoService {
     })
     async getEzEthBalance(
         walletClient: EVMWalletClient,
-        spec: ChainSpecifications,
         parameters: z.infer<typeof balanceOfSchema>
     ): Promise<string> {
         try {
+            const { l2EzEthAddress } = getRenzoAddresses(
+                walletClient.getChain().id
+            );
             const balance = await walletClient.read({
-                address: spec[walletClient.getChain().id].l2EzEthAddress,
+                address: l2EzEthAddress,
                 abi: EZETH_ABI,
                 functionName: "balanceOf",
                 args: [parameters._address],
