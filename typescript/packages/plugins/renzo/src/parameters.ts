@@ -23,3 +23,14 @@ export class BalanceOfParams extends createToolParameters(
         _address: z.string().describe("The address to check the balance of"),
     })
 ) {}
+
+export class ApproveDepositParams extends createToolParameters(
+    z.object({
+        _token: z.string().describe("The token to approve"),
+        _amount: z.string().describe("The amount of tokens to approve"),
+    })
+) {}
+
+export class GetDepositAddressParams extends createToolParameters(
+    z.object({}) // Empty schema for getRenzoDepositAddress
+) {}

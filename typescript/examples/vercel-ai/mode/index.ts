@@ -30,7 +30,28 @@ const walletClient = createWalletClient({
 (async () => {
     const tools = await getOnChainTools({
         wallet: viem(walletClient),
-        plugins: [sendETH(), erc20({ tokens: [USDC, MODE] }), kim(), renzo()],
+        plugins: [
+            sendETH(),
+            erc20({
+                tokens: [
+                    USDC,
+                    MODE,
+                    {
+                        decimals: 18,
+                        symbol: "WETH",
+                        name: "Wrapped Ether",
+                        chains: {
+                            "34443": {
+                                contractAddress:
+                                    "0x4200000000000000000000000000000000000006",
+                            },
+                        },
+                    },
+                ],
+            }),
+            kim(),
+            renzo(),
+        ],
     });
 
     const rl = readline.createInterface({

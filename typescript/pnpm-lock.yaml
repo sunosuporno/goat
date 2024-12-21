@@ -470,6 +470,9 @@ importers:
       '@goat-sdk/plugin-kim':
         specifier: workspace:*
         version: link:../../../packages/plugins/kim
+      '@goat-sdk/plugin-renzo':
+        specifier: workspace:*
+        version: link:../../../packages/plugins/renzo
       '@goat-sdk/wallet-evm':
         specifier: workspace:*
         version: link:../../../packages/wallets/evm
