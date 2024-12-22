@@ -12,6 +12,7 @@ import {
     RepayIUSDParameters,
     MonitorPositionParameters,
 } from "./parameters";
+import { CalculateMaxWithdrawableParameters } from "./parameters";
 
 interface LoopPosition {
     borrowedAmounts: string[];
@@ -114,15 +115,25 @@ export class IroncladService {
 
                 // Get reserve configuration
                 console.log(`[Ironclad] Fetching reserve configuration...`);
+                const userReserveDataResult = await walletClient.read({
+                    address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
+                    abi: PROTOCOL_DATA_PROVIDER_ABI,
+                    functionName: "getUserReserveData",
+                    args: [asset, walletClient.getAddress()],
+                });
+                const userReserveData = (
+                    userReserveDataResult as { value: any[] }
+                ).value;
+
                 const reserveConfigResult = await walletClient.read({
                     address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
                     abi: PROTOCOL_DATA_PROVIDER_ABI,
                     functionName: "getReserveConfigurationData",
                     args: [asset],
                 });
-
                 const reserveConfig = (reserveConfigResult as { value: any[] })
                     .value;
+
                 const ltv = Number(reserveConfig[1]);
                 console.log(`[Ironclad] LTV from protocol: ${ltv / 100}%`);
 
@@ -234,99 +245,183 @@ export class IroncladService {
 
     @Tool({
         name: "ironclad_loop_withdraw",
-        description: "Unwind a looped position on Ironclad",
+        description: "Withdraw a looped position on Ironclad",
     })
     async loopWithdraw(
         walletClient: EVMWalletClient,
         parameters: LoopWithdrawParameters
-    ): Promise<void> {
+    ): Promise<string> {
         try {
-            const asset = await walletClient.resolveAddress(parameters.asset);
-            const decimals = Number(
-                await walletClient.read({
-                    address: asset as `0x${string}`,
-                    abi: ERC20_ABI,
-                    functionName: "decimals",
-                })
+            console.log(`[Ironclad] ====== Starting Loop Withdrawal ======`);
+            console.log(`[Ironclad] Asset Address: ${parameters.assetAddress}`);
+            console.log(
+                `[Ironclad] User Address: ${walletClient.getAddress()}`
             );
 
-            // Unwind in reverse order
-            for (
-                let i = parameters.position.borrowedAmounts.length - 1;
-                i >= 0;
-                i--
-            ) {
-                const amountToRepay = parameters.position.borrowedAmounts[i];
+            // Get initial debt position
+            console.log(`[Ironclad] Fetching initial position data...`);
+            const userReserveDataResult = await walletClient.read({
+                address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
+                abi: PROTOCOL_DATA_PROVIDER_ABI,
+                functionName: "getUserReserveData",
+                args: [parameters.assetAddress, walletClient.getAddress()],
+            });
 
-                // Withdraw enough to repay
+            const userReserveData = (userReserveDataResult as { value: any[] })
+                .value;
+            let remainingDebt = userReserveData[2]; // currentVariableDebt
+            console.log(`[Ironclad] Initial variable debt: ${remainingDebt}`);
+
+            let withdrawalCount = 1;
+            while (remainingDebt > 0n) {
+                console.log(
+                    `\n[Ironclad] === Withdrawal Loop ${withdrawalCount} ===`
+                );
+                console.log(`[Ironclad] Remaining debt: ${remainingDebt}`);
+
+                // Calculate max withdrawable amount
+                console.log(
+                    `[Ironclad] Calculating maximum withdrawable amount...`
+                );
+                const maxWithdrawable =
+                    await this.calculateMaxWithdrawableAmount(walletClient, {
+                        assetAddress: parameters.assetAddress,
+                    });
+                console.log(
+                    `[Ironclad] Max withdrawable amount: ${maxWithdrawable}`
+                );
+
+                if (maxWithdrawable === 0n) {
+                    console.error(
+                        `[Ironclad] ❌ Cannot proceed: Zero withdrawable amount`
+                    );
+                    throw new Error(
+                        "Cannot withdraw any more funds while maintaining health factor"
+                    );
+                }
+
+                // If this is the last withdrawal (no remaining debt), withdraw everything
+                // Otherwise, use 99.5% of max withdrawable to account for any small changes
+                const withdrawAmount =
+                    remainingDebt === 0n
+                        ? maxWithdrawable
+                        : (maxWithdrawable * 995n) / 1000n;
+                console.log(
+                    `[Ironclad] Adjusted withdrawal amount: ${withdrawAmount}`
+                );
+                console.log(
+                    `[Ironclad] Using full amount: ${remainingDebt === 0n}`
+                );
+
+                // Withdraw the calculated amount
                 await walletClient.sendTransaction({
                     to: LENDING_POOL_ADDRESS,
                     abi: LENDING_POOL_ABI,
                     functionName: "withdraw",
                     args: [
-                        asset,
-                        parseUnits(amountToRepay, decimals),
+                        parameters.assetAddress,
+                        withdrawAmount,
                         walletClient.getAddress(),
                     ],
                 });
+                console.log(`[Ironclad] ✅ Withdrawal successful`);
 
-                // Check and handle allowance for repayment
-                const allowance = await walletClient.read({
-                    address: asset as `0x${string}`,
+                // Check and handle allowance
+                console.log(`[Ironclad] Checking repayment allowance...`);
+                const allowanceResult = await walletClient.read({
+                    address: parameters.assetAddress as `0x${string}`,
                     abi: ERC20_ABI,
                     functionName: "allowance",
                     args: [walletClient.getAddress(), LENDING_POOL_ADDRESS],
                 });
+                const allowance = (allowanceResult as { value: bigint }).value;
 
-                if (Number(allowance) < Number(amountToRepay)) {
+                if (allowance < withdrawAmount) {
+                    console.log(
+                        `[Ironclad] Insufficient allowance, approving...`
+                    );
                     await walletClient.sendTransaction({
-                        to: asset,
+                        to: parameters.assetAddress,
                         abi: ERC20_ABI,
                         functionName: "approve",
-                        args: [
-                            LENDING_POOL_ADDRESS,
-                            parseUnits(amountToRepay, decimals),
-                        ],
+                        args: [LENDING_POOL_ADDRESS, withdrawAmount],
                     });
+                    console.log(`[Ironclad] ✅ Approval successful`);
+                } else {
+                    console.log(`[Ironclad] Sufficient allowance exists`);
                 }
 
-                // Inside loopWithdraw function, before repaying
-                const reserveData = await walletClient.read({
-                    address: PROTOCOL_DATA_PROVIDER_ADDRESS,
-                    abi: PROTOCOL_DATA_PROVIDER_ABI,
-                    functionName: "getUserReserveData",
-                    args: [asset, walletClient.getAddress()],
-                });
-
-                // Use currentVariableDebt from the response
-                const currentDebt = (reserveData as unknown as any[])[2]; // index 2 is currentVariableDebt
-
-                // Repay borrowed amount
+                // Repay
+                console.log(`[Ironclad] Executing repayment transaction...`);
                 await walletClient.sendTransaction({
                     to: LENDING_POOL_ADDRESS,
                     abi: LENDING_POOL_ABI,
                     functionName: "repay",
                     args: [
-                        asset,
-                        parseUnits(amountToRepay, decimals),
-                        2, // Variable rate mode
+                        parameters.assetAddress,
+                        withdrawAmount,
+                        2,
                         walletClient.getAddress(),
                     ],
                 });
+                console.log(`[Ironclad] ✅ Repayment successful`);
+
+                // After repayment, get updated debt from protocol
+                const updatedReserveData = await walletClient.read({
+                    address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
+                    abi: PROTOCOL_DATA_PROVIDER_ABI,
+                    functionName: "getUserReserveData",
+                    args: [parameters.assetAddress, walletClient.getAddress()],
+                });
+                remainingDebt = (updatedReserveData as { value: any[] })
+                    .value[2];
+                console.log(
+                    `[Ironclad] Updated remaining debt from protocol: ${remainingDebt}`
+                );
+                withdrawalCount++;
             }
 
-            // Finally withdraw initial deposit
-            await walletClient.sendTransaction({
-                to: LENDING_POOL_ADDRESS,
-                abi: LENDING_POOL_ABI,
-                functionName: "withdraw",
-                args: [
-                    asset,
-                    parseUnits(parameters.position.totalDeposited, decimals),
-                    walletClient.getAddress(),
-                ],
+            // After debt is cleared, withdraw any remaining deposited assets
+            const finalReserveData = await walletClient.read({
+                address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
+                abi: PROTOCOL_DATA_PROVIDER_ABI,
+                functionName: "getUserReserveData",
+                args: [parameters.assetAddress, walletClient.getAddress()],
             });
+            const remainingDeposit = (finalReserveData as { value: any[] })
+                .value[0]; // aToken balance
+
+            if (remainingDeposit > 0n) {
+                console.log(`\n[Ironclad] === Final Withdrawal ===`);
+                console.log(
+                    `[Ironclad] Remaining deposit to withdraw: ${remainingDeposit}`
+                );
+
+                // Withdraw all remaining deposits
+                await walletClient.sendTransaction({
+                    to: LENDING_POOL_ADDRESS,
+                    abi: LENDING_POOL_ABI,
+                    functionName: "withdraw",
+                    args: [
+                        parameters.assetAddress,
+                        remainingDeposit,
+                        walletClient.getAddress(),
+                    ],
+                });
+                console.log(`[Ironclad] ✅ Final withdrawal successful`);
+            }
+
+            console.log(`\n[Ironclad] ====== Loop Withdrawal Complete ======`);
+            console.log(
+                `[Ironclad] Total withdrawal loops: ${withdrawalCount - 1}`
+            );
+            console.log(`[Ironclad] Final debt: ${remainingDebt}`);
+
+            return `Successfully unwound position in ${
+                withdrawalCount - 1
+            } loops`;
         } catch (error) {
+            console.error(`[Ironclad] ❌ Error in loop withdraw:`, error);
             throw Error(`Failed to execute loop withdraw: ${error}`);
         }
     }
@@ -346,36 +441,52 @@ export class IroncladService {
         liquidationThreshold: string;
     }> {
         try {
-            const asset = await walletClient.resolveAddress(
-                parameters.collateralToken
-            );
-            const decimals = Number(
-                await walletClient.read({
-                    address: asset as `0x${string}`,
-                    abi: ERC20_ABI,
-                    functionName: "decimals",
-                })
-            );
+            console.log(`[Ironclad] ====== Monitoring Loop Position ======`);
+            const asset = parameters.collateralToken;
+            console.log(`[Ironclad] Asset Address: ${asset}`);
+
+            const decimalsResult = await walletClient.read({
+                address: asset as `0x${string}`,
+                abi: ERC20_ABI,
+                functionName: "decimals",
+            });
+            const decimals = (decimalsResult as { value: number }).value;
+            console.log(`[Ironclad] Asset Decimals: ${decimals}`);
 
             // Get user's reserve data
-            const userReserveData = (await walletClient.read({
-                address: PROTOCOL_DATA_PROVIDER_ADDRESS,
+            console.log(`[Ironclad] Fetching user reserve data...`);
+            const userReserveDataResult = await walletClient.read({
+                address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
                 abi: PROTOCOL_DATA_PROVIDER_ABI,
                 functionName: "getUserReserveData",
                 args: [asset, walletClient.getAddress()],
-            })) as unknown as any[];
+            });
+            const userReserveData = (userReserveDataResult as { value: any[] })
+                .value;
 
             // Get reserve configuration
-            const reserveConfig = (await walletClient.read({
-                address: PROTOCOL_DATA_PROVIDER_ADDRESS,
+            console.log(`[Ironclad] Fetching reserve configuration...`);
+            const reserveConfigResult = await walletClient.read({
+                address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
                 abi: PROTOCOL_DATA_PROVIDER_ABI,
                 functionName: "getReserveConfigurationData",
                 args: [asset],
-            })) as unknown as any[];
+            });
+            const reserveConfig = (reserveConfigResult as { value: any[] })
+                .value;
 
             const totalCollateral = formatUnits(userReserveData[0], decimals);
             const totalBorrowed = formatUnits(userReserveData[2], decimals);
-            const liquidationThreshold = Number(reserveConfig[2]) / 10000; // Convert from bps
+            const liquidationThreshold = Number(reserveConfig[2]) / 10000;
+
+            console.log(`[Ironclad] Position Details:`);
+            console.log(`  - Total Collateral: ${totalCollateral}`);
+            console.log(`  - Total Borrowed: ${totalBorrowed}`);
+            console.log(
+                `  - Liquidation Threshold: ${(
+                    liquidationThreshold * 100
+                ).toFixed(2)}%`
+            );
 
             // Calculate current LTV and health factor
             const currentLTV =
@@ -385,6 +496,7 @@ export class IroncladService {
                           (Number(totalBorrowed) / Number(totalCollateral)) *
                           100
                       ).toFixed(2);
+            console.log(`  - Current LTV: ${currentLTV}%`);
 
             const healthFactor =
                 totalBorrowed === "0"
@@ -393,6 +505,9 @@ export class IroncladService {
                           (Number(totalCollateral) * liquidationThreshold) /
                           Number(totalBorrowed)
                       ).toFixed(2);
+            console.log(`  - Health Factor: ${healthFactor}`);
+
+            console.log(`[Ironclad] ====== Monitoring Complete ======\n`);
 
             return {
                 totalCollateral,
@@ -404,6 +519,7 @@ export class IroncladService {
                 )}%`,
             };
         } catch (error) {
+            console.error(`[Ironclad] ❌ Error monitoring position:`, error);
             throw Error(`Failed to monitor loop position: ${error}`);
         }
     }
@@ -578,22 +694,84 @@ export class IroncladService {
                 })
             );
 
-            const userReserveData = await walletClient.read({
+            const userReserveDataResult = await walletClient.read({
                 address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
                 abi: PROTOCOL_DATA_PROVIDER_ABI,
                 functionName: "getUserReserveData",
                 args: [collateralToken, walletClient.getAddress()],
             });
-
-            const data = userReserveData as unknown as any[];
+            const userReserveData = (userReserveDataResult as { value: any[] })
+                .value;
 
             return {
-                currentCollateral: formatUnits(data[0], decimals), // currentATokenBalance
-                currentBorrow: formatUnits(data[2], 6), // currentVariableDebt (iUSD is 6 decimals)
-                currentRate: formatUnits(data[4], 27), // variableBorrowRate
+                currentCollateral: formatUnits(userReserveData[0], decimals), // currentATokenBalance
+                currentBorrow: formatUnits(userReserveData[2], 6), // currentVariableDebt (iUSD is 6 decimals)
+                currentRate: formatUnits(userReserveData[4], 27), // variableBorrowRate
             };
         } catch (error) {
             throw Error(`Failed to monitor position: ${error}`);
         }
+    }
+
+    @Tool({
+        name: "ironclad_calculate_max_withdrawable",
+        description:
+            "Calculate maximum withdrawable amount while maintaining health factor",
+    })
+    async calculateMaxWithdrawableAmount(
+        walletClient: EVMWalletClient,
+        parameters: CalculateMaxWithdrawableParameters
+    ): Promise<bigint> {
+        const asset = parameters.assetAddress;
+        // Get user's reserve data
+        const userReserveDataResult = await walletClient.read({
+            address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
+            abi: PROTOCOL_DATA_PROVIDER_ABI,
+            functionName: "getUserReserveData",
+            args: [asset, walletClient.getAddress()],
+        });
+        const userReserveData = (userReserveDataResult as { value: any[] })
+            .value;
+
+        // Get reserve configuration
+        const reserveConfigResult = await walletClient.read({
+            address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
+            abi: PROTOCOL_DATA_PROVIDER_ABI,
+            functionName: "getReserveConfigurationData",
+            args: [asset],
+        });
+        const reserveConfig = (reserveConfigResult as { value: any[] }).value;
+
+        const currentATokenBalance = userReserveData[0]; // Current collateral
+        const currentVariableDebt = userReserveData[2]; // Current debt
+        const liquidationThreshold = reserveConfig[2]; // In basis points (e.g., 8500 = 85%)
+
+        console.log(
+            `[Ironclad] Current aToken balance: ${currentATokenBalance}`
+        );
+        console.log(`[Ironclad] Current variable debt: ${currentVariableDebt}`);
+
+        let remainingDebt: bigint;
+        // Update remaining debt from protocol data
+        remainingDebt = currentVariableDebt;
+
+        if (remainingDebt === 0n) {
+            console.log(`[Ironclad] No remaining debt, exiting loop`);
+            return currentATokenBalance; // Can withdraw everything if no debt
+        }
+
+        // To maintain HF >= 1, we need:
+        // (collateral * liquidationThreshold) / debt >= 1
+        // So: collateral >= debt / (liquidationThreshold)
+        // Therefore, maximum withdrawable = currentCollateral - (debt / liquidationThreshold)
+
+        const minRequiredCollateral =
+            (currentVariableDebt * 10000n) / liquidationThreshold;
+
+        if (currentATokenBalance <= minRequiredCollateral) {
+            return 0n; // Cannot withdraw anything
+        }
+
+        return currentATokenBalance - minRequiredCollateral;
     }
 }

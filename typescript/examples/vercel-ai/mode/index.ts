@@ -1,6 +1,6 @@
 import readline from "node:readline";
 
-import { openai } from "@ai-sdk/openai";
+import { createXai } from "@ai-sdk/xai";
 import { generateText } from "ai";
 
 import { http } from "viem";
@@ -26,6 +26,10 @@ const walletClient = createWalletClient({
     account: account,
     transport: http(process.env.RPC_PROVIDER_URL),
     chain: mode,
+});
+
+const xai = createXai({
+    apiKey: process.env.GROK_API_KEY,
 });
 
 (async () => {
@@ -63,7 +67,7 @@ const walletClient = createWalletClient({
         console.log("\n-------------------\n");
         try {
             const result = await generateText({
-                model: openai("gpt-4o-mini"),
+                model: xai("grok-beta"),
                 tools: tools,
                 maxSteps: 10,
                 prompt: prompt,

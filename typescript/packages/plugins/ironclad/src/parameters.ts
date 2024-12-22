@@ -24,16 +24,9 @@ export class LoopDepositParameters extends createToolParameters(
 
 export class LoopWithdrawParameters extends createToolParameters(
     z.object({
-        asset: z.string().describe("The asset to withdraw"),
-        position: z
-            .object({
-                borrowedAmounts: z
-                    .array(z.string())
-                    .describe("Array of borrowed amounts to unwind"),
-                totalDeposited: z.string().describe("Total amount deposited"),
-                totalBorrowed: z.string().describe("Total amount borrowed"),
-            })
-            .describe("Position details"),
+        assetAddress: z
+            .string()
+            .describe("The address of the asset to withdraw"),
     })
 ) {}
 
@@ -66,5 +59,15 @@ export class MonitorPositionParameters extends createToolParameters(
         collateralToken: z
             .string()
             .describe("The collateral token to check position for"),
+    })
+) {}
+
+export class CalculateMaxWithdrawableParameters extends createToolParameters(
+    z.object({
+        assetAddress: z
+            .string()
+            .describe(
+                "The address of the asset to calculate max withdrawable amount for"
+            ),
     })
 ) {}
