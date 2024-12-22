@@ -533,65 +533,79 @@ export class IroncladService {
         parameters: BorrowIUSDParameters
     ): Promise<string> {
         try {
-            const collateralToken = await walletClient.resolveAddress(
-                parameters.collateralToken
+            console.log(
+                `[Ironclad] ====== Starting iUSD Borrow Operation ======`
             );
-
-            // Get collateral token decimals
-            const collateralDecimals = Number(
-                await walletClient.read({
-                    address: collateralToken as `0x${string}`,
-                    abi: ERC20_ABI,
-                    functionName: "decimals",
-                })
+            console.log(
+                `[Ironclad] Collateral Token: ${parameters.collateralTokenAddress}`
+            );
+            console.log(
+                `[Ironclad] Collateral Amount: ${parameters.collateralAmount}`
+            );
+            console.log(
+                `[Ironclad] iUSD Borrow Raw Amount: ${parameters.iusdAmount}`
+            );
+            console.log(
+                `[Ironclad] User Address: ${walletClient.getAddress()}`
             );
 
             // Get iUSD decimals
+            console.log(`[Ironclad] Fetching iUSD decimals...`);
+            const iusdDecimalsResult = await walletClient.read({
+                address: IUSD_ADDRESS as `0x${string}`,
+                abi: ERC20_ABI,
+                functionName: "decimals",
+            });
             const iusdDecimals = Number(
-                await walletClient.read({
-                    address: IUSD_ADDRESS as `0x${string}`,
-                    abi: ERC20_ABI,
-                    functionName: "decimals",
-                })
+                (iusdDecimalsResult as { value: number }).value
             );
+            console.log(`[Ironclad] iUSD decimals: ${iusdDecimals}`);
 
             // Check and handle collateral allowance
-            const allowance = await walletClient.read({
-                address: collateralToken as `0x${string}`,
+            console.log(`[Ironclad] Checking collateral allowance...`);
+            const allowanceResult = await walletClient.read({
+                address: parameters.collateralTokenAddress as `0x${string}`,
                 abi: ERC20_ABI,
                 functionName: "allowance",
                 args: [walletClient.getAddress(), LENDING_POOL_ADDRESS],
             });
+            const allowance = (allowanceResult as { value: bigint }).value;
+            console.log(
+                `[Ironclad] Current allowance: ${allowance.toString()}`
+            );
 
             if (Number(allowance) < Number(parameters.collateralAmount)) {
+                console.log(
+                    `[Ironclad] Insufficient allowance, approving collateral...`
+                );
                 await walletClient.sendTransaction({
-                    to: collateralToken,
+                    to: parameters.collateralTokenAddress,
                     abi: ERC20_ABI,
                     functionName: "approve",
-                    args: [
-                        LENDING_POOL_ADDRESS,
-                        parseUnits(
-                            parameters.collateralAmount,
-                            collateralDecimals
-                        ),
-                    ],
+                    args: [LENDING_POOL_ADDRESS, parameters.collateralAmount],
                 });
+                console.log(`[Ironclad] ✅ Approval successful`);
+            } else {
+                console.log(`[Ironclad] Sufficient allowance exists`);
             }
 
             // Deposit collateral
+            console.log(`[Ironclad] Depositing collateral...`);
             await walletClient.sendTransaction({
                 to: LENDING_POOL_ADDRESS,
                 abi: LENDING_POOL_ABI,
                 functionName: "deposit",
                 args: [
-                    collateralToken,
-                    parseUnits(parameters.collateralAmount, collateralDecimals),
+                    parameters.collateralTokenAddress,
+                    parameters.collateralAmount,
                     walletClient.getAddress(),
                     parameters.referralCode,
                 ],
             });
+            console.log(`[Ironclad] ✅ Collateral deposit successful`);
 
             // Borrow iUSD
+            console.log(`[Ironclad] Borrowing iUSD...`);
             const txHash = await walletClient.sendTransaction({
                 to: LENDING_POOL_ADDRESS,
                 abi: LENDING_POOL_ABI,
@@ -604,9 +618,14 @@ export class IroncladService {
                     walletClient.getAddress(),
                 ],
             });
+            console.log(`[Ironclad] ✅ iUSD borrow successful`);
+
+            console.log(`\n[Ironclad] ====== Borrow Operation Complete ======`);
+            console.log(`[Ironclad] Transaction hash: ${txHash.hash}`);
 
             return txHash.hash;
         } catch (error) {
+            console.error(`[Ironclad] ❌ Error in borrow operation:`, error);
             throw Error(`Failed to borrow iUSD: ${error}`);
         }
     }

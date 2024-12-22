@@ -32,13 +32,17 @@ export class LoopWithdrawParameters extends createToolParameters(
 
 export class BorrowIUSDParameters extends createToolParameters(
     z.object({
-        collateralToken: z
+        collateralTokenAddress: z
             .string()
-            .describe("The token to deposit as collateral"),
+            .describe("The address of the token to deposit as collateral"),
         collateralAmount: z
             .string()
             .describe("Amount of collateral to deposit"),
-        iusdAmount: z.string().describe("Amount of iUSD to borrow"),
+        iusdAmount: z
+            .string()
+            .describe(
+                "Amount of iUSD to borrow, should be just the raw number"
+            ),
         referralCode: z
             .string()
             .optional()
