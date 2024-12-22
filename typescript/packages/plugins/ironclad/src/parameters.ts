@@ -3,8 +3,12 @@ import { z } from "zod";
 
 export class LoopDepositParameters extends createToolParameters(
     z.object({
-        asset: z.string().describe("The asset to deposit and borrow"),
-        initialAmount: z.string().describe("The initial amount to deposit"),
+        assetAddress: z
+            .string()
+            .describe("The address of the asset to deposit and borrow"),
+        initialAmount: z
+            .string()
+            .describe("The initial amount of the asset to deposit"),
         numLoops: z
             .number()
             .min(1)
@@ -21,10 +25,15 @@ export class LoopDepositParameters extends createToolParameters(
 export class LoopWithdrawParameters extends createToolParameters(
     z.object({
         asset: z.string().describe("The asset to withdraw"),
-        borrowedAmounts: z
-            .array(z.string())
-            .describe("Array of borrowed amounts to unwind"),
-        totalDeposited: z.string().describe("Total amount deposited"),
+        position: z
+            .object({
+                borrowedAmounts: z
+                    .array(z.string())
+                    .describe("Array of borrowed amounts to unwind"),
+                totalDeposited: z.string().describe("Total amount deposited"),
+                totalBorrowed: z.string().describe("Total amount borrowed"),
+            })
+            .describe("Position details"),
     })
 ) {}
 

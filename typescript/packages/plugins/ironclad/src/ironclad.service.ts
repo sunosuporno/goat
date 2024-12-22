@@ -1,5 +1,5 @@
 import { Tool } from "@goat-sdk/core";
-import type { EVMWalletClient } from "@goat-sdk/wallet-evm";
+import { EVMWalletClient } from "@goat-sdk/wallet-evm";
 import { formatUnits, parseUnits } from "viem";
 import type { Address } from "viem";
 import { z } from "zod";
@@ -19,11 +19,10 @@ interface LoopPosition {
     totalBorrowed: string;
 }
 
-const LENDING_POOL_ADDRESS: Address =
-    "0x794a61358D6845594F94dc1DB02A252CC533d587";
-const PROTOCOL_DATA_PROVIDER_ADDRESS: Address =
-    "0x057835e7b4fbbb396b5c6928b391752106d2eb7b";
-const IUSD_ADDRESS: Address = "0xe7334Ad0e325139329E747cF2Fc24538dD564987";
+const LENDING_POOL_ADDRESS = "0xB702cE183b4E1Faa574834715E5D4a6378D0eEd3";
+const PROTOCOL_DATA_PROVIDER_ADDRESS =
+    "0x29563f73De731Ae555093deb795ba4D1E584e42E";
+const IUSD_ADDRESS = "0xA70266C8F8Cf33647dcFEE763961aFf418D9E1E4";
 
 export class IroncladService {
     constructor() {}
@@ -31,48 +30,62 @@ export class IroncladService {
     @Tool({
         name: "ironclad_loop_deposit",
         description:
-            "Perform a looped deposit (recursive borrowing) on Ironclad",
+            "Perform a looped deposit (recursive borrowing) on Ironclad. Send the amount of the asset (in base units) you want to deposit as the initial amount.",
     })
     async loopDeposit(
         walletClient: EVMWalletClient,
         parameters: LoopDepositParameters
     ): Promise<LoopPosition> {
         try {
+            console.log(
+                `[Ironclad] ====== Starting Loop Deposit Operation ======`
+            );
+            console.log(`[Ironclad] Asset Address: ${parameters.assetAddress}`);
+            console.log(
+                `[Ironclad] Initial Amount: ${parameters.initialAmount}`
+            );
+            console.log(`[Ironclad] Number of Loops: ${parameters.numLoops}`);
+            console.log(
+                `[Ironclad] User Address: ${walletClient.getAddress()}`
+            );
+
             const position: LoopPosition = {
                 borrowedAmounts: [],
                 totalDeposited: "0",
                 totalBorrowed: "0",
             };
 
-            const asset = await walletClient.resolveAddress(parameters.asset);
-            const decimals = Number(
-                await walletClient.read({
-                    address: asset as `0x${string}`,
-                    abi: ERC20_ABI,
-                    functionName: "decimals",
-                })
-            );
-
-            // Check and handle allowance
-            const allowance = await walletClient.read({
+            const asset = parameters.assetAddress;
+            console.log(`[Ironclad] Checking allowance for initial deposit...`);
+            const allowanceResult = await walletClient.read({
                 address: asset as `0x${string}`,
                 abi: ERC20_ABI,
                 functionName: "allowance",
                 args: [walletClient.getAddress(), LENDING_POOL_ADDRESS],
             });
+            const allowance = (allowanceResult as { value: bigint }).value;
+
+            console.log(`[Ironclad] Current allowance: ${allowance}`);
+            console.log(
+                `[Ironclad] Required allowance: ${parameters.initialAmount}`
+            );
 
             if (Number(allowance) < Number(parameters.initialAmount)) {
+                console.log(`[Ironclad] Insufficient allowance, approving...`);
                 await walletClient.sendTransaction({
                     to: asset,
                     abi: ERC20_ABI,
                     functionName: "approve",
-                    args: [
-                        LENDING_POOL_ADDRESS,
-                        parseUnits(parameters.initialAmount, decimals),
-                    ],
+                    args: [LENDING_POOL_ADDRESS, parameters.initialAmount],
                 });
+                console.log(`[Ironclad] Approval transaction successful`);
+            } else {
+                console.log(`[Ironclad] Sufficient allowance already exists`);
             }
 
+            console.log(
+                `[Ironclad] Performing initial deposit of ${parameters.initialAmount}`
+            );
             // Initial deposit
             await walletClient.sendTransaction({
                 to: LENDING_POOL_ADDRESS,
@@ -80,80 +93,105 @@ export class IroncladService {
                 functionName: "deposit",
                 args: [
                     asset,
-                    parseUnits(parameters.initialAmount, decimals),
+                    parameters.initialAmount,
                     walletClient.getAddress(),
                     parameters.referralCode,
                 ],
             });
+
+            console.log(`[Ironclad] Initial deposit successful`);
 
             position.totalDeposited = parameters.initialAmount;
             let currentAmount = parameters.initialAmount;
 
             // Execute loops
             for (let i = 0; i < parameters.numLoops; i++) {
-                // Get reserve configuration data for proper LTV
-                const reserveConfig = await walletClient.read({
+                console.log(
+                    `\n[Ironclad] ====== Starting Loop ${i + 1}/${
+                        parameters.numLoops
+                    } ======`
+                );
+
+                // Get reserve configuration
+                console.log(`[Ironclad] Fetching reserve configuration...`);
+                const reserveConfigResult = await walletClient.read({
                     address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
                     abi: PROTOCOL_DATA_PROVIDER_ABI,
                     functionName: "getReserveConfigurationData",
                     args: [asset],
                 });
 
-                // Use the actual LTV from protocol
+                const reserveConfig = (reserveConfigResult as { value: any[] })
+                    .value;
+                const ltv = Number(reserveConfig[1]);
+                console.log(`[Ironclad] LTV from protocol: ${ltv / 100}%`);
+
                 const borrowAmount = (
-                    (Number(currentAmount) *
-                        Number((reserveConfig as unknown as any[])[1])) /
+                    (Number(currentAmount) * ltv) /
                     10000
                 ).toString();
+                console.log(
+                    `[Ironclad] Calculated borrow amount: ${borrowAmount}`
+                );
 
                 // Borrow
+                console.log(`[Ironclad] Executing borrow transaction...`);
                 await walletClient.sendTransaction({
                     to: LENDING_POOL_ADDRESS,
                     abi: LENDING_POOL_ABI,
                     functionName: "borrow",
                     args: [
                         asset,
-                        parseUnits(borrowAmount, decimals),
+                        borrowAmount,
                         2, // Variable rate mode
                         parameters.referralCode,
                         walletClient.getAddress(),
                     ],
                 });
+                console.log(`[Ironclad] Borrow successful`);
 
-                // Check and handle allowance for borrowed amount
-                const loopAllowance = await walletClient.read({
+                // Allowance check
+                console.log(
+                    `[Ironclad] Checking allowance for subsequent deposit...`
+                );
+                const loopAllowanceResult = await walletClient.read({
                     address: asset as `0x${string}`,
                     abi: ERC20_ABI,
                     functionName: "allowance",
                     args: [walletClient.getAddress(), LENDING_POOL_ADDRESS],
                 });
+                const loopAllowance = (loopAllowanceResult as { value: bigint })
+                    .value;
 
                 if (Number(loopAllowance) < Number(borrowAmount)) {
+                    console.log(
+                        `[Ironclad] Insufficient allowance, approving...`
+                    );
                     await walletClient.sendTransaction({
                         to: asset,
                         abi: ERC20_ABI,
                         functionName: "approve",
-                        args: [
-                            LENDING_POOL_ADDRESS,
-                            parseUnits(borrowAmount, decimals),
-                        ],
+                        args: [LENDING_POOL_ADDRESS, borrowAmount],
                     });
+                    console.log(`[Ironclad] Approval successful`);
                 }
 
-                // Deposit borrowed amount
+                // Deposit
+                console.log(`[Ironclad] Depositing borrowed amount...`);
                 await walletClient.sendTransaction({
                     to: LENDING_POOL_ADDRESS,
                     abi: LENDING_POOL_ABI,
                     functionName: "deposit",
                     args: [
                         asset,
-                        parseUnits(borrowAmount, decimals),
+                        borrowAmount,
                         walletClient.getAddress(),
                         parameters.referralCode,
                     ],
                 });
+                console.log(`[Ironclad] Deposit successful`);
 
-                // Track position
+                // Update position tracking
                 position.borrowedAmounts.push(borrowAmount);
                 position.totalBorrowed = (
                     Number(position.totalBorrowed) + Number(borrowAmount)
@@ -161,12 +199,35 @@ export class IroncladService {
                 position.totalDeposited = (
                     Number(position.totalDeposited) + Number(borrowAmount)
                 ).toString();
-
                 currentAmount = borrowAmount;
+
+                console.log(`[Ironclad] Loop ${i + 1} Summary:`);
+                console.log(`  - Amount Borrowed: ${borrowAmount}`);
+                console.log(`  - Total Borrowed: ${position.totalBorrowed}`);
+                console.log(`  - Total Deposited: ${position.totalDeposited}`);
+                console.log(
+                    `[Ironclad] ====== Loop ${i + 1} Complete ======\n`
+                );
             }
+
+            console.log(
+                `\n[Ironclad] ====== Loop Deposit Operation Complete ======`
+            );
+            console.log(`[Ironclad] Final Position Summary:`);
+            console.log(`  - Total Deposited: ${position.totalDeposited}`);
+            console.log(`  - Total Borrowed: ${position.totalBorrowed}`);
+            console.log(
+                `  - Number of Loops Completed: ${parameters.numLoops}`
+            );
+            console.log(
+                `[Ironclad] ==========================================\n`
+            );
 
             return position;
         } catch (error) {
+            console.error(`[Ironclad] ❌ Error in loop deposit operation:`);
+            console.error(`[Ironclad] ${error}`);
+            console.error(`[Ironclad] Stack trace:`, error);
             throw Error(`Failed to execute loop deposit: ${error}`);
         }
     }
