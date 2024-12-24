@@ -18,11 +18,17 @@ export class ExactInputParams extends createToolParameters(
     z.object({
         path: pathSchema.describe("The path of the swap"),
         recipient: z.string().describe("Address to receive the output tokens"),
-        deadline: z.number().describe("The deadline for the swap"),
-        amountIn: z.string().describe("The amount of tokens to swap in"),
+        deadline: z
+            .number()
+            .optional()
+            .default(60 * 60 * 24)
+            .describe("The deadline for the swap in seconds from now"),
+        amountIn: z
+            .string()
+            .describe("The amount of tokens to swap in base units"),
         amountOutMinimum: z
             .string()
-            .describe("The minimum amount of tokens to receive"),
+            .describe("The minimum amount of tokens to receive in base units"),
     })
 ) {}
 
@@ -32,11 +38,17 @@ export class ExactOutputParams extends createToolParameters(
         recipient: z
             .string()
             .describe("The address to receive the output tokens"),
-        deadline: z.number().describe("The deadline for the swap"),
-        amountOut: z.string().describe("The amount of tokens to swap out"),
+        deadline: z
+            .number()
+            .optional()
+            .default(60 * 60 * 24)
+            .describe("The deadline for the swap in seconds from now"),
+        amountOut: z
+            .string()
+            .describe("The amount of tokens to swap out in base units"),
         amountInMaximum: z
             .string()
-            .describe("The maximum amount of tokens to swap in"),
+            .describe("The maximum amount of tokens to swap in in base units"),
     })
 ) {}
 
@@ -119,10 +131,18 @@ export class MintParams extends createToolParameters(
             .number()
             .optional()
             .describe("The upper tick for the liquidity"),
-        amount0Desired: z.string().describe("The amount of token0 to add"),
-        amount1Desired: z.string().describe("The amount of token1 to add"),
-        amount0Min: z.string().describe("The minimum amount of token0 to add"),
-        amount1Min: z.string().describe("The minimum amount of token1 to add"),
+        amount0Desired: z
+            .string()
+            .describe("The amount of token0 to add in base units"),
+        amount1Desired: z
+            .string()
+            .describe("The amount of token1 to add in base units"),
+        amount0Min: z
+            .string()
+            .describe("The minimum amount of token0 to add in base units"),
+        amount1Min: z
+            .string()
+            .describe("The minimum amount of token1 to add in base units"),
         deadline: z.number().describe("The deadline for the swap"),
     })
 ) {}
@@ -136,11 +156,23 @@ export class IncreaseLiquidityParams extends createToolParameters(
             .string()
             .describe("The address of the second token in the pair"),
         tokenId: z.string().describe("The token id of the liquidity"),
-        amount0Desired: z.string().describe("The amount of token0 to add"),
-        amount1Desired: z.string().describe("The amount of token1 to add"),
-        amount0Min: z.string().describe("The minimum amount of token0 to add"),
-        amount1Min: z.string().describe("The minimum amount of token1 to add"),
-        deadline: z.number().describe("The deadline for the swap"),
+        amount0Desired: z
+            .string()
+            .describe("The amount of token0 to add in base units"),
+        amount1Desired: z
+            .string()
+            .describe("The amount of token1 to add in base units"),
+        amount0Min: z
+            .string()
+            .describe("The minimum amount of token0 to add in base units"),
+        amount1Min: z
+            .string()
+            .describe("The minimum amount of token1 to add in base units"),
+        deadline: z
+            .number()
+            .optional()
+            .default(60 * 60 * 24)
+            .describe("The deadline for the swap in seconds from now"),
     })
 ) {}
 
@@ -155,12 +187,16 @@ export class DecreaseLiquidityParams extends createToolParameters(
         amount0Min: z
             .string()
             .optional()
-            .describe("The minimum amount of token0 to remove"),
+            .describe("The minimum amount of token0 to remove in base units"),
         amount1Min: z
             .string()
             .optional()
-            .describe("The minimum amount of token1 to remove"),
-        deadline: z.number().describe("The deadline for the transaction"),
+            .describe("The minimum amount of token1 to remove in base units"),
+        deadline: z
+            .number()
+            .optional()
+            .default(60 * 60 * 24)
+            .describe("The deadline for the transaction in seconds from now"),
     })
 ) {}
 
