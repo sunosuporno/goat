@@ -1,7 +1,6 @@
 import readline from "node:readline";
 
-import { createXai } from "@ai-sdk/xai";
-
+import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
 
 import { http } from "viem";
@@ -28,10 +27,6 @@ const walletClient = createWalletClient({
     chain: mode,
 });
 
-const xai = createXai({
-    apiKey: process.env.GROK_API_KEY,
-});
-
 (async () => {
     const tools = await getOnChainTools({
         wallet: viem(walletClient),
@@ -53,35 +48,27 @@ const xai = createXai({
             break;
         }
 
-        console.log("\n===========================================");
-        console.log("🤖 Processing prompt:", prompt);
-        console.log("===========================================\n");
-
+        console.log("\n-------------------\n");
+        console.log("TOOLS CALLED");
         console.log("\n-------------------\n");
 
-        console.log("🛠️  TOOLS CALLED");
-        console.log("-------------------");
-
+        console.log("\n-------------------\n");
+        console.log("RESPONSE");
+        console.log("\n-------------------\n");
         try {
             const result = await generateText({
-                model: xai("grok-beta"),
+                model: openai("gpt-4o-mini"),
                 tools: tools,
-                maxSteps: 15,
+                maxSteps: 10,
                 prompt: prompt,
                 onStepFinish: (event) => {
-                    console.log("\n👉 Step Result:");
-                    console.log(JSON.stringify(event.toolResults, null, 2));
+                    console.log(event.toolResults);
                 },
             });
-
-            console.log("\n📊 FINAL RESPONSE");
-            console.log("-------------------");
             console.log(result.text);
         } catch (error) {
-            console.log("\n❌ ERROR");
-            console.log("-------------------");
             console.error(error);
         }
-        console.log("\n===========================================\n");
+        console.log("\n-------------------\n");
     }
 })();
