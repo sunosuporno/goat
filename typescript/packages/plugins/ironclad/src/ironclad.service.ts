@@ -5,7 +5,9 @@ import type { Address } from "viem";
 import { z } from "zod";
 import { ERC20_ABI } from "./abi/erc20";
 import { LENDING_POOL_ABI } from "./abi/lendingPool";
+import { BORROWER_ABI } from "./abi/borrower";
 import { PROTOCOL_DATA_PROVIDER_ABI } from "./abi/protocolDataProvider";
+import { TROVE_MANAGER_ABI } from "./abi/troveManager";
 import { LoopDepositParameters, LoopWithdrawParameters } from "./parameters";
 import {
     BorrowIUSDParameters,
@@ -24,6 +26,8 @@ const LENDING_POOL_ADDRESS = "0xB702cE183b4E1Faa574834715E5D4a6378D0eEd3";
 const PROTOCOL_DATA_PROVIDER_ADDRESS =
     "0x29563f73De731Ae555093deb795ba4D1E584e42E";
 const IUSD_ADDRESS = "0xA70266C8F8Cf33647dcFEE763961aFf418D9E1E4";
+const BORROWER_ADDRESS = "0x9571873B4Df31D317d4ED4FE4689915A2F3fF7d4";
+const TROVE_MANAGER_ADDRESS = "0x829746b34F624fdB03171AA4cF4D2675B0F2A2e6";
 
 export class IroncladService {
     constructor() {}
@@ -542,24 +546,13 @@ export class IroncladService {
             console.log(
                 `[Ironclad] Collateral Amount: ${parameters.collateralAmount}`
             );
+            console.log(`[Ironclad] LUSD Amount: ${parameters.lusdAmount}`);
             console.log(
-                `[Ironclad] iUSD Borrow Raw Amount: ${parameters.iusdAmount}`
+                `[Ironclad] Max Fee Percentage: ${parameters.maxFeePercentage}`
             );
             console.log(
                 `[Ironclad] User Address: ${walletClient.getAddress()}`
             );
-
-            // Get iUSD decimals
-            console.log(`[Ironclad] Fetching iUSD decimals...`);
-            const iusdDecimalsResult = await walletClient.read({
-                address: IUSD_ADDRESS as `0x${string}`,
-                abi: ERC20_ABI,
-                functionName: "decimals",
-            });
-            const iusdDecimals = Number(
-                (iusdDecimalsResult as { value: number }).value
-            );
-            console.log(`[Ironclad] iUSD decimals: ${iusdDecimals}`);
 
             // Check and handle collateral allowance
             console.log(`[Ironclad] Checking collateral allowance...`);
@@ -567,7 +560,7 @@ export class IroncladService {
                 address: parameters.collateralTokenAddress as `0x${string}`,
                 abi: ERC20_ABI,
                 functionName: "allowance",
-                args: [walletClient.getAddress(), LENDING_POOL_ADDRESS],
+                args: [walletClient.getAddress(), BORROWER_ADDRESS],
             });
             const allowance = (allowanceResult as { value: bigint }).value;
             console.log(
@@ -582,43 +575,28 @@ export class IroncladService {
                     to: parameters.collateralTokenAddress,
                     abi: ERC20_ABI,
                     functionName: "approve",
-                    args: [LENDING_POOL_ADDRESS, parameters.collateralAmount],
+                    args: [BORROWER_ADDRESS, parameters.collateralAmount],
                 });
                 console.log(`[Ironclad] ✅ Approval successful`);
             } else {
                 console.log(`[Ironclad] Sufficient allowance exists`);
             }
 
-            // Deposit collateral
-            console.log(`[Ironclad] Depositing collateral...`);
-            await walletClient.sendTransaction({
-                to: LENDING_POOL_ADDRESS,
-                abi: LENDING_POOL_ABI,
-                functionName: "deposit",
+            // Open Trove
+            console.log(`[Ironclad] Opening Trove...`);
+            const txHash = await walletClient.sendTransaction({
+                to: BORROWER_ADDRESS,
+                abi: BORROWER_ABI,
+                functionName: "openTrove",
                 args: [
                     parameters.collateralTokenAddress,
                     parameters.collateralAmount,
-                    walletClient.getAddress(),
-                    parameters.referralCode,
+                    parameters.maxFeePercentage,
+                    parameters.lusdAmount,
+                    "0x0000000000000000000000000000000000000000", // upperHint
+                    "0x0000000000000000000000000000000000000000", // lowerHint
                 ],
             });
-            console.log(`[Ironclad] ✅ Collateral deposit successful`);
-
-            // Borrow iUSD
-            console.log(`[Ironclad] Borrowing iUSD...`);
-            const txHash = await walletClient.sendTransaction({
-                to: LENDING_POOL_ADDRESS,
-                abi: LENDING_POOL_ABI,
-                functionName: "borrow",
-                args: [
-                    IUSD_ADDRESS,
-                    parseUnits(parameters.iusdAmount, iusdDecimals),
-                    2, // Variable rate
-                    parameters.referralCode,
-                    walletClient.getAddress(),
-                ],
-            });
-            console.log(`[Ironclad] ✅ iUSD borrow successful`);
 
             console.log(`\n[Ironclad] ====== Borrow Operation Complete ======`);
             console.log(`[Ironclad] Transaction hash: ${txHash.hash}`);
@@ -632,74 +610,88 @@ export class IroncladService {
 
     @Tool({
         name: "ironclad_repay_iusd",
-        description: "Repay borrowed iUSD",
+        description: "Repay all iUSD and close the Trove position",
     })
     async repayIUSD(
         walletClient: EVMWalletClient,
         parameters: RepayIUSDParameters
     ): Promise<string> {
         try {
-            // Get iUSD decimals
-            const iusdDecimals = Number(
-                await walletClient.read({
-                    address: IUSD_ADDRESS as `0x${string}`,
-                    abi: ERC20_ABI,
-                    functionName: "decimals",
-                })
+            console.log(
+                `[Ironclad] ====== Starting Trove Close Operation ======`
             );
+            console.log(
+                `[Ironclad] Collateral Token: ${parameters.collateralToken}`
+            );
+            console.log(
+                `[Ironclad] User Address: ${walletClient.getAddress()}`
+            );
+
+            // First, we need to get the total debt of the Trove
+            const troveDebtResult = await walletClient.read({
+                address: TROVE_MANAGER_ADDRESS as `0x${string}`,
+                abi: TROVE_MANAGER_ABI,
+                functionName: "getTroveDebt",
+                args: [walletClient.getAddress(), parameters.collateralToken],
+            });
+            const troveDebt = (troveDebtResult as { value: bigint }).value;
+
+            console.log(`[Ironclad] Total Trove Debt: ${troveDebt.toString()}`);
 
             // Check and handle iUSD allowance
             const allowance = await walletClient.read({
                 address: IUSD_ADDRESS as `0x${string}`,
                 abi: ERC20_ABI,
                 functionName: "allowance",
-                args: [walletClient.getAddress(), LENDING_POOL_ADDRESS],
+                args: [walletClient.getAddress(), BORROWER_ADDRESS],
             });
 
-            if (Number(allowance) < Number(parameters.repayAmount)) {
+            if (Number(allowance) < Number(troveDebt)) {
+                console.log(`[Ironclad] Approving iUSD for repayment...`);
                 await walletClient.sendTransaction({
                     to: IUSD_ADDRESS,
                     abi: ERC20_ABI,
                     functionName: "approve",
-                    args: [
-                        LENDING_POOL_ADDRESS,
-                        parseUnits(parameters.repayAmount, iusdDecimals),
-                    ],
+                    args: [BORROWER_ADDRESS, troveDebt],
                 });
+                console.log(`[Ironclad] ✅ iUSD approval successful`);
             }
 
-            // Repay iUSD
+            // Close Trove
+            console.log(`[Ironclad] Closing Trove...`);
             const txHash = await walletClient.sendTransaction({
-                to: LENDING_POOL_ADDRESS,
-                abi: LENDING_POOL_ABI,
-                functionName: "repay",
-                args: [
-                    IUSD_ADDRESS,
-                    parseUnits(parameters.repayAmount, iusdDecimals),
-                    2, // Variable rate
-                    walletClient.getAddress(),
-                ],
+                to: BORROWER_ADDRESS,
+                abi: BORROWER_ABI,
+                functionName: "closeTrove",
+                args: [parameters.collateralToken],
             });
+
+            console.log(
+                `\n[Ironclad] ====== Trove Close Operation Complete ======`
+            );
+            console.log(`[Ironclad] Transaction hash: ${txHash.hash}`);
 
             return txHash.hash;
         } catch (error) {
-            throw Error(`Failed to repay iUSD: ${error}`);
+            console.error(`[Ironclad] ❌ Error in close operation:`, error);
+            throw Error(`Failed to close Trove: ${error}`);
         }
     }
 
     @Tool({
         name: "ironclad_monitor_position",
-        description: "Monitor health of an iUSD position",
+        description: "Monitor health of a Trove position",
     })
     async monitorPosition(
         walletClient: EVMWalletClient,
         parameters: MonitorPositionParameters
     ): Promise<{
         currentCollateral: string;
-        currentBorrow: string;
-        currentRate: string;
+        currentDebt: string;
+        troveStatus: string;
     }> {
         try {
+            console.log(`[Ironclad] ====== Monitoring Trove Position ======`);
             const collateralToken = await walletClient.resolveAddress(
                 parameters.collateralToken
             );
@@ -713,21 +705,50 @@ export class IroncladService {
                 })
             );
 
-            const userReserveDataResult = await walletClient.read({
-                address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
-                abi: PROTOCOL_DATA_PROVIDER_ABI,
-                functionName: "getUserReserveData",
-                args: [collateralToken, walletClient.getAddress()],
+            // Get Trove status
+            const statusResult = await walletClient.read({
+                address: TROVE_MANAGER_ADDRESS as `0x${string}`,
+                abi: TROVE_MANAGER_ABI,
+                functionName: "getTroveStatus",
+                args: [walletClient.getAddress(), collateralToken],
             });
-            const userReserveData = (userReserveDataResult as { value: any[] })
-                .value;
+            const status = Number((statusResult as { value: bigint }).value);
+
+            // Get Trove collateral
+            const collateralResult = await walletClient.read({
+                address: TROVE_MANAGER_ADDRESS as `0x${string}`,
+                abi: TROVE_MANAGER_ABI,
+                functionName: "getTroveColl",
+                args: [walletClient.getAddress(), collateralToken],
+            });
+            const collateral = (collateralResult as { value: bigint }).value;
+
+            // Get Trove debt
+            const debtResult = await walletClient.read({
+                address: TROVE_MANAGER_ADDRESS as `0x${string}`,
+                abi: TROVE_MANAGER_ABI,
+                functionName: "getTroveDebt",
+                args: [walletClient.getAddress(), collateralToken],
+            });
+            const debt = (debtResult as { value: bigint }).value;
+
+            // Map status number to string
+            const statusMap = {
+                0: "nonExistent",
+                1: "active",
+                2: "closedByOwner",
+                3: "closedByLiquidation",
+                4: "closedByRedemption",
+            };
 
             return {
-                currentCollateral: formatUnits(userReserveData[0], decimals), // currentATokenBalance
-                currentBorrow: formatUnits(userReserveData[2], 6), // currentVariableDebt (iUSD is 6 decimals)
-                currentRate: formatUnits(userReserveData[4], 27), // variableBorrowRate
+                currentCollateral: formatUnits(collateral, decimals),
+                currentDebt: formatUnits(debt, 18), // LUSD uses 18 decimals
+                troveStatus:
+                    statusMap[status as keyof typeof statusMap] || "unknown",
             };
         } catch (error) {
+            console.error(`[Ironclad] ❌ Error monitoring position:`, error);
             throw Error(`Failed to monitor position: ${error}`);
         }
     }

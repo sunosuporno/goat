@@ -38,23 +38,26 @@ export class BorrowIUSDParameters extends createToolParameters(
         collateralAmount: z
             .string()
             .describe("Amount of collateral to deposit"),
-        iusdAmount: z
+        maxFeePercentage: z
             .string()
-            .describe(
-                "Amount of iUSD to borrow, should be just the raw number"
-            ),
-        referralCode: z
+            .describe("Maximum fee percentage for the borrowing operation"),
+        lusdAmount: z.string().describe("Amount of LUSD to borrow"),
+        upperHint: z
             .string()
             .optional()
-            .default("0")
-            .describe("Referral code"),
+            .default("0x0000000000000000000000000000000000000000")
+            .describe("Upper hint for the trove insertion"),
+        lowerHint: z
+            .string()
+            .optional()
+            .default("0x0000000000000000000000000000000000000000")
+            .describe("Lower hint for the trove insertion"),
     })
 ) {}
 
 export class RepayIUSDParameters extends createToolParameters(
     z.object({
         collateralToken: z.string().describe("The collateral token used"),
-        repayAmount: z.string().describe("Amount of iUSD to repay"),
     })
 ) {}
 
