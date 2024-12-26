@@ -2,7 +2,6 @@ import { Tool } from "@goat-sdk/core";
 import { EVMWalletClient } from "@goat-sdk/wallet-evm";
 import { RENZO_ABI } from "./abi/renzo";
 import { EZETH_ABI } from "./abi/ezeth";
-import { ERC20_ABI } from "./abi/erc20";
 import { getRenzoAddresses } from "./types/ChainSpecifications";
 import {
     DepositParams,
