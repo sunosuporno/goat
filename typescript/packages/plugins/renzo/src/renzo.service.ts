@@ -65,22 +65,22 @@ export class RenzoService {
             );
 
             if (
-                parameters._token.toLowerCase() !==
+                parameters.tokenAddress.toLowerCase() !==
                 depositTokenAddress.toLowerCase() // Now we can safely call toLowerCase()
             ) {
                 console.error(`[Renzo] Token mismatch:
-                    Provided: ${parameters._token}
+                    Provided: ${parameters.tokenAddress}
                     Expected: ${depositTokenAddress}`);
                 throw new Error(
-                    `Invalid token: ${parameters._token}. Expected deposit token: ${depositTokenAddress}`
+                    `Invalid token: ${parameters.tokenAddress}. Expected deposit token: ${depositTokenAddress}`
                 );
             }
             console.log(`[Renzo] Token validation successful`);
 
             console.log(`[Renzo] Initiating deposit transaction with:
-                Amount In: ${parameters._amountIn}
-                Min Out: ${parameters._minOut}
-                Deadline: ${parameters._deadline}`);
+                Amount In: ${parameters.amountIn}
+                Min Out: ${parameters.minOut}
+                Deadline: ${parameters.deadline}`);
 
             const deadline = BigInt(Math.floor(Date.now() / 1000) + 300); // current time + 5 minutes
 
@@ -89,8 +89,8 @@ export class RenzoService {
                 abi: RENZO_ABI,
                 functionName: "deposit",
                 args: [
-                    parameters._amountIn,
-                    parameters._minOut,
+                    parameters.amountIn,
+                    parameters.minOut,
                     deadline, // Use the calculated deadline
                 ],
             });
@@ -126,13 +126,13 @@ export class RenzoService {
                 `[Renzo] Using deposit address: ${renzoDepositAddress}`
             );
 
-            const _minOut = parseUnits(parameters._minOut, 18);
-            const value = parseUnits(parameters._value, 18);
+            const minOut = parseUnits(parameters.minOut, 18);
+            const value = parseUnits(parameters.value, 18);
 
             console.log(`[Renzo] Initiating ETH deposit transaction with:
-                Value: ${parameters._value} ETH
-                Min Out: ${parameters._minOut}
-                Deadline: ${parameters._deadline}`);
+                Value: ${parameters.value} ETH
+                Min Out: ${parameters.minOut}
+                Deadline: ${parameters.deadline}`);
 
             const deadline = BigInt(Math.floor(Date.now() / 1000) + 300); // 5 minutes from now
 
@@ -140,7 +140,7 @@ export class RenzoService {
                 to: renzoDepositAddress,
                 abi: RENZO_ABI,
                 functionName: "depositETH",
-                args: [_minOut, deadline],
+                args: [minOut, deadline],
                 value,
             });
 
@@ -166,7 +166,7 @@ export class RenzoService {
         try {
             console.log(
                 `[Renzo] Checking ezETH balance for address:`,
-                parameters._address
+                parameters.address
             );
 
             const { l2EzEthAddress } = getRenzoAddresses(
@@ -180,7 +180,7 @@ export class RenzoService {
                 address: l2EzEthAddress,
                 abi: EZETH_ABI,
                 functionName: "balanceOf",
-                args: [parameters._address],
+                args: [parameters.address],
             });
 
             console.log(`[Renzo] Balance result type:`, typeof balanceResult);
@@ -194,7 +194,7 @@ export class RenzoService {
             const balance = (balanceResult as { value: bigint }).value;
             const formattedBalance = formatUnits(balance, 18);
             console.log(
-                `[Renzo] ezETH balance for ${parameters._address}: ${formattedBalance}`
+                `[Renzo] ezETH balance for ${parameters.address}: ${formattedBalance}`
             );
 
             return formattedBalance;
@@ -218,10 +218,10 @@ export class RenzoService {
         );
 
         const hash = await walletClient.sendTransaction({
-            to: parameters._token,
+            to: parameters.tokenAddress,
             abi: ERC20_ABI,
             functionName: "approve",
-            args: [renzoDepositAddress, parameters._amount],
+            args: [renzoDepositAddress, parameters.amount],
         });
 
         return hash.hash;
