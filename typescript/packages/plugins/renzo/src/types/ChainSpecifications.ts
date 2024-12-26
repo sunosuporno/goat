@@ -1,5 +1,5 @@
 import { Address } from "viem";
-import { base, mode, arbitrum, bsc, linea } from "viem/chains";
+import { arbitrum, base, bsc, linea, mode } from "viem/chains";
 
 export type ChainSpecifications = Record<
     number,

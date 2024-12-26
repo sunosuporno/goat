@@ -96,10 +96,7 @@ export const WETH: Token = {
     },
 };
 
-export function getTokensForNetwork(
-    chainId: number,
-    tokens: Token[]
-): ChainSpecificToken[] {
+export function getTokensForNetwork(chainId: number, tokens: Token[]): ChainSpecificToken[] {
     const result: ChainSpecificToken[] = [];
 
     for (const token of tokens) {
