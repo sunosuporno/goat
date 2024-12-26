@@ -66,7 +66,9 @@ export class Erc20Service {
         parameters: GetTokenBalanceParameters
     ) {
         try {
-            const resolvedWalletAddress = walletClient.getAddress();
+            const resolvedWalletAddress = await walletClient.resolveAddress(
+                parameters.wallet
+            );
 
             const rawBalance = await walletClient.read({
                 address: parameters.tokenAddress,
@@ -89,7 +91,7 @@ export class Erc20Service {
         parameters: TransferParameters
     ) {
         try {
-            const to = parameters.to;
+            const to = await walletClient.resolveAddress(parameters.to);
 
             const hash = await walletClient.sendTransaction({
                 to: parameters.tokenAddress,
@@ -131,8 +133,10 @@ export class Erc20Service {
         parameters: GetTokenAllowanceParameters
     ) {
         try {
-            const owner = parameters.owner;
-            const spender = parameters.spender;
+            const owner = await walletClient.resolveAddress(parameters.owner);
+            const spender = await walletClient.resolveAddress(
+                parameters.spender
+            );
 
             const rawAllowance = await walletClient.read({
                 address: parameters.tokenAddress,
@@ -154,7 +158,9 @@ export class Erc20Service {
         parameters: ApproveParameters
     ) {
         try {
-            const spender = parameters.spender;
+            const spender = await walletClient.resolveAddress(
+                parameters.spender
+            );
 
             const hash = await walletClient.sendTransaction({
                 to: parameters.tokenAddress,
@@ -177,8 +183,8 @@ export class Erc20Service {
         parameters: TransferFromParameters
     ) {
         try {
-            const from = parameters.from;
-            const to = parameters.to;
+            const from = await walletClient.resolveAddress(parameters.from);
+            const to = await walletClient.resolveAddress(parameters.to);
 
             const hash = await walletClient.sendTransaction({
                 to: parameters.tokenAddress,
