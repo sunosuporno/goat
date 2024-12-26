@@ -111,8 +111,7 @@ export class RenzoService {
                 args: [parameters.address],
             });
             const balance = (balanceResult as { value: bigint }).value;
-            const formattedBalance = formatUnits(balance, 18);
-            return formattedBalance;
+            return balance.toString();
         } catch (error) {
             throw Error(`Failed to get ezETH balance: ${error}`);
         }

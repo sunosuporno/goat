@@ -9,9 +9,9 @@ import { privateKeyToAccount } from "viem/accounts";
 import { mode } from "viem/chains";
 
 import { getOnChainTools } from "@goat-sdk/adapter-vercel-ai";
-import { MODE, USDC, WETH, erc20 } from "@goat-sdk/plugin-erc20";
+import { MODE, USDC, erc20 } from "@goat-sdk/plugin-erc20";
 import { kim } from "@goat-sdk/plugin-kim";
-import { renzo } from "@goat-sdk/plugin-renzo";
+
 import { sendETH } from "@goat-sdk/wallet-evm";
 import { viem } from "@goat-sdk/wallet-viem";
 
@@ -30,14 +30,7 @@ const walletClient = createWalletClient({
 (async () => {
     const tools = await getOnChainTools({
         wallet: viem(walletClient),
-        plugins: [
-            sendETH(),
-            erc20({
-                tokens: [USDC, MODE, WETH],
-            }),
-            kim(),
-            renzo(),
-        ],
+        plugins: [sendETH(), erc20({ tokens: [USDC, MODE] }), kim()],
     });
 
     const rl = readline.createInterface({
