@@ -8,7 +8,6 @@ import {
     DepositParams,
     DepositETHParams,
     BalanceOfParams,
-    ApproveDepositParams,
     GetDepositAddressParams,
 } from "./parameters";
 import { parseUnits, formatUnits } from "viem";
@@ -117,29 +116,6 @@ export class RenzoService {
         } catch (error) {
             throw Error(`Failed to get ezETH balance: ${error}`);
         }
-    }
-
-    @Tool({
-        name: "approve_deposit_erc20_into_renzo",
-        description:
-            "Approve Renzo deposit contract to spend tokens. Call this before calling erc20 deposit function.",
-    })
-    async approveDeposit(
-        walletClient: EVMWalletClient,
-        parameters: ApproveDepositParams
-    ): Promise<string> {
-        const { renzoDepositAddress } = getRenzoAddresses(
-            walletClient.getChain().id
-        );
-
-        const hash = await walletClient.sendTransaction({
-            to: parameters.tokenAddress,
-            abi: ERC20_ABI,
-            functionName: "approve",
-            args: [renzoDepositAddress, parameters.amount],
-        });
-
-        return hash.hash;
     }
 
     @Tool({

@@ -9,7 +9,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { mode } from "viem/chains";
 
 import { getOnChainTools } from "@goat-sdk/adapter-vercel-ai";
-import { MODE, USDC, erc20 } from "@goat-sdk/plugin-erc20";
+import { MODE, USDC, WETH, erc20 } from "@goat-sdk/plugin-erc20";
 import { kim } from "@goat-sdk/plugin-kim";
 import { renzo } from "@goat-sdk/plugin-renzo";
 import { sendETH } from "@goat-sdk/wallet-evm";
@@ -33,21 +33,7 @@ const walletClient = createWalletClient({
         plugins: [
             sendETH(),
             erc20({
-                tokens: [
-                    USDC,
-                    MODE,
-                    {
-                        decimals: 18,
-                        symbol: "WETH",
-                        name: "Wrapped Ether",
-                        chains: {
-                            "34443": {
-                                contractAddress:
-                                    "0x4200000000000000000000000000000000000006",
-                            },
-                        },
-                    },
-                ],
+                tokens: [USDC, MODE, WETH],
             }),
             kim(),
             renzo(),

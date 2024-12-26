@@ -40,17 +40,6 @@ export class BalanceOfParams extends createToolParameters(
     })
 ) {}
 
-export class ApproveDepositParams extends createToolParameters(
-    z.object({
-        tokenAddress: z
-            .string()
-            .describe("The address of the token to approve"),
-        amount: z
-            .string()
-            .describe("The amount of tokens to approve in base units"),
-    })
-) {}
-
 export class GetDepositAddressParams extends createToolParameters(
     z.object({}) // Empty schema for getRenzoDepositAddress
 ) {}
