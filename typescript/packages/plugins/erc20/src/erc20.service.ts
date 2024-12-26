@@ -22,17 +22,11 @@ export class Erc20Service {
     }
 
     @Tool({
-        description:
-            "Get the ERC20 token info by its symbol, including the contract address, decimals, and name",
+        description: "Get the ERC20 token info by its symbol, including the contract address, decimals, and name",
     })
-    async getTokenInfoBySymbol(
-        walletClient: EVMWalletClient,
-        parameters: GetTokenInfoBySymbolParameters
-    ) {
+    async getTokenInfoBySymbol(walletClient: EVMWalletClient, parameters: GetTokenInfoBySymbolParameters) {
         const token = this.tokens.find((token) =>
-            [token.symbol, token.symbol.toLowerCase()].includes(
-                parameters.symbol
-            )
+            [token.symbol, token.symbol.toLowerCase()].includes(parameters.symbol),
         );
 
         if (!token) {
@@ -44,9 +38,7 @@ export class Erc20Service {
         const contractAddress = token.chains[chain.id]?.contractAddress;
 
         if (!contractAddress) {
-            throw Error(
-                `Token with symbol ${parameters.symbol} not found on chain ${chain.id}`
-            );
+            throw Error(`Token with symbol ${parameters.symbol} not found on chain ${chain.id}`);
         }
 
         return {
@@ -58,17 +50,11 @@ export class Erc20Service {
     }
 
     @Tool({
-        description:
-            "Get the balance of an ERC20 token in base units. Convert to decimal units before returning.",
+        description: "Get the balance of an ERC20 token in base units. Convert to decimal units before returning.",
     })
-    async getTokenBalance(
-        walletClient: EVMWalletClient,
-        parameters: GetTokenBalanceParameters
-    ) {
+    async getTokenBalance(walletClient: EVMWalletClient, parameters: GetTokenBalanceParameters) {
         try {
-            const resolvedWalletAddress = await walletClient.resolveAddress(
-                parameters.wallet
-            );
+            const resolvedWalletAddress = await walletClient.resolveAddress(parameters.wallet);
 
             const rawBalance = await walletClient.read({
                 address: parameters.tokenAddress,
@@ -86,10 +72,7 @@ export class Erc20Service {
     @Tool({
         description: "Transfer an amount of an ERC20 token to an address",
     })
-    async transfer(
-        walletClient: EVMWalletClient,
-        parameters: TransferParameters
-    ) {
+    async transfer(walletClient: EVMWalletClient, parameters: TransferParameters) {
         try {
             const to = await walletClient.resolveAddress(parameters.to);
 
@@ -108,10 +91,7 @@ export class Erc20Service {
     @Tool({
         description: "Get the total supply of an ERC20 token",
     })
-    async getTokenTotalSupply(
-        walletClient: EVMWalletClient,
-        parameters: GetTokenTotalSupplyParameters
-    ) {
+    async getTokenTotalSupply(walletClient: EVMWalletClient, parameters: GetTokenTotalSupplyParameters) {
         try {
             const rawTotalSupply = await walletClient.read({
                 address: parameters.tokenAddress,
@@ -128,15 +108,10 @@ export class Erc20Service {
     @Tool({
         description: "Get the allowance of an ERC20 token",
     })
-    async getTokenAllowance(
-        walletClient: EVMWalletClient,
-        parameters: GetTokenAllowanceParameters
-    ) {
+    async getTokenAllowance(walletClient: EVMWalletClient, parameters: GetTokenAllowanceParameters) {
         try {
             const owner = await walletClient.resolveAddress(parameters.owner);
-            const spender = await walletClient.resolveAddress(
-                parameters.spender
-            );
+            const spender = await walletClient.resolveAddress(parameters.spender);
 
             const rawAllowance = await walletClient.read({
                 address: parameters.tokenAddress,
@@ -153,14 +128,9 @@ export class Erc20Service {
     @Tool({
         description: "Approve an amount of an ERC20 token to an address",
     })
-    async approve(
-        walletClient: EVMWalletClient,
-        parameters: ApproveParameters
-    ) {
+    async approve(walletClient: EVMWalletClient, parameters: ApproveParameters) {
         try {
-            const spender = await walletClient.resolveAddress(
-                parameters.spender
-            );
+            const spender = await walletClient.resolveAddress(parameters.spender);
 
             const hash = await walletClient.sendTransaction({
                 to: parameters.tokenAddress,
@@ -175,13 +145,9 @@ export class Erc20Service {
     }
 
     @Tool({
-        description:
-            "Transfer an amount of an ERC20 token from an address to another address",
+        description: "Transfer an amount of an ERC20 token from an address to another address",
     })
-    async transferFrom(
-        walletClient: EVMWalletClient,
-        parameters: TransferFromParameters
-    ) {
+    async transferFrom(walletClient: EVMWalletClient, parameters: TransferFromParameters) {
         try {
             const from = await walletClient.resolveAddress(parameters.from);
             const to = await walletClient.resolveAddress(parameters.to);
@@ -208,8 +174,7 @@ export class Erc20Service {
     }
 
     @Tool({
-        description:
-            "Convert an amount of an ERC20 token from its base unit to its decimal unit",
+        description: "Convert an amount of an ERC20 token from its base unit to its decimal unit",
     })
     async convertFromBaseUnit(parameters: ConvertFromBaseUnitParameters) {
         const { amount, decimals } = parameters;

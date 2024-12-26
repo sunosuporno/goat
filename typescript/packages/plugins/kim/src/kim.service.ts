@@ -38,10 +38,7 @@ export class KimService {
         description:
             "Swap an exact amount of input tokens for an output token in a single hop. Have the token amounts in their base units. Don't need to approve the swap router for the output token. User will have sufficient balance of the input token. The swap router address is already provided in the function. Returns a transaction hash on success. Once you get a transaction hash, the swap is complete - do not call this function again.",
     })
-    async swapExactInputSingleHop(
-        walletClient: EVMWalletClient,
-        parameters: ExactInputSingleParams
-    ) {
+    async swapExactInputSingleHop(walletClient: EVMWalletClient, parameters: ExactInputSingleParams) {
         try {
             const approvalHash = await walletClient.sendTransaction({
                 to: parameters.tokenInAddress as `0x${string}`,
@@ -50,8 +47,7 @@ export class KimService {
                 args: [SWAP_ROUTER_ADDRESS, parameters.amountIn],
             });
 
-            const timestamp =
-                Math.floor(Date.now() / 1000) + parameters.deadline;
+            const timestamp = Math.floor(Date.now() / 1000) + parameters.deadline;
 
             const hash = await walletClient.sendTransaction({
                 to: SWAP_ROUTER_ADDRESS,
@@ -83,7 +79,7 @@ export class KimService {
     })
     async swapExactOutputSingleHop(
         walletClient: EVMWalletClient,
-        parameters: ExactOutputSingleParams
+        parameters: ExactOutputSingleParams,
     ): Promise<string> {
         try {
             const tokenIn = parameters.tokenInAddress;
@@ -92,8 +88,7 @@ export class KimService {
             const amountOut = parameters.amountOut;
             const amountInMaximum = parameters.amountInMaximum;
             const limitSqrtPrice = parameters.limitSqrtPrice;
-            const timestamp =
-                Math.floor(Date.now() / 1000) + parameters.deadline;
+            const timestamp = Math.floor(Date.now() / 1000) + parameters.deadline;
 
             const approvalHash = await walletClient.sendTransaction({
                 to: parameters.tokenInAddress as `0x${string}`,
@@ -129,14 +124,9 @@ export class KimService {
         name: "kim_swap_exact_input_multi_hop",
         description: "Swap an exact amount of input tokens in multiple hops",
     })
-    async swapExactInputMultiHop(
-        walletClient: EVMWalletClient,
-        parameters: ExactInputParams
-    ): Promise<string> {
+    async swapExactInputMultiHop(walletClient: EVMWalletClient, parameters: ExactInputParams): Promise<string> {
         try {
-            const recipient = await walletClient.resolveAddress(
-                parameters.recipient
-            );
+            const recipient = await walletClient.resolveAddress(parameters.recipient);
 
             // Get first and last token decimals
             const tokenInDecimals = Number(
@@ -144,7 +134,7 @@ export class KimService {
                     address: parameters.path.tokenIn as `0x${string}`,
                     abi: ERC20_ABI,
                     functionName: "decimals",
-                })
+                }),
             );
 
             const tokenOutDecimals = Number(
@@ -152,7 +142,7 @@ export class KimService {
                     address: parameters.path.tokenOut as `0x${string}`,
                     abi: ERC20_ABI,
                     functionName: "decimals",
-                })
+                }),
             );
 
             // Encode the path
@@ -161,13 +151,11 @@ export class KimService {
                 [
                     [
                         parameters.path.tokenIn as `0x${string}`,
-                        ...parameters.path.intermediateTokens.map(
-                            (t: string) => t as `0x${string}`
-                        ),
+                        ...parameters.path.intermediateTokens.map((t: string) => t as `0x${string}`),
                         parameters.path.tokenOut as `0x${string}`,
                     ],
                     parameters.path.fees,
-                ]
+                ],
             );
 
             const hash = await walletClient.sendTransaction({
@@ -191,17 +179,11 @@ export class KimService {
 
     @Tool({
         name: "kim_swap_exact_output_multi_hop",
-        description:
-            "Swap tokens to receive an exact amount of output tokens in multiple hops",
+        description: "Swap tokens to receive an exact amount of output tokens in multiple hops",
     })
-    async swapExactOutputMultiHop(
-        walletClient: EVMWalletClient,
-        parameters: ExactOutputParams
-    ): Promise<string> {
+    async swapExactOutputMultiHop(walletClient: EVMWalletClient, parameters: ExactOutputParams): Promise<string> {
         try {
-            const recipient = await walletClient.resolveAddress(
-                parameters.recipient
-            );
+            const recipient = await walletClient.resolveAddress(parameters.recipient);
 
             // Get first and last token decimals
             const tokenInDecimals = Number(
@@ -209,7 +191,7 @@ export class KimService {
                     address: parameters.path.tokenIn as `0x${string}`,
                     abi: ERC20_ABI,
                     functionName: "decimals",
-                })
+                }),
             );
 
             const tokenOutDecimals = Number(
@@ -217,7 +199,7 @@ export class KimService {
                     address: parameters.path.tokenOut as `0x${string}`,
                     abi: ERC20_ABI,
                     functionName: "decimals",
-                })
+                }),
             );
 
             // Encode the path
@@ -226,13 +208,11 @@ export class KimService {
                 [
                     [
                         parameters.path.tokenIn as `0x${string}`,
-                        ...parameters.path.intermediateTokens.map(
-                            (t: string) => t as `0x${string}`
-                        ),
+                        ...parameters.path.intermediateTokens.map((t: string) => t as `0x${string}`),
                         parameters.path.tokenOut as `0x${string}`,
                     ],
                     parameters.path.fees,
-                ]
+                ],
             );
 
             const hash = await walletClient.sendTransaction({
@@ -259,17 +239,12 @@ export class KimService {
         description:
             "Mint a new liquidity position in a pool. Returns a transaction hash on success. Once you get a transaction hash, the mint is complete - do not call this function again.",
     })
-    async mintPosition(
-        walletClient: EVMWalletClient,
-        parameters: MintParams
-    ): Promise<string> {
+    async mintPosition(walletClient: EVMWalletClient, parameters: MintParams): Promise<string> {
         try {
             const tickSpacing = 60;
 
             // First determine token order
-            const isOrderMatched =
-                parameters.token0Address.toLowerCase() <
-                parameters.token1Address.toLowerCase();
+            const isOrderMatched = parameters.token0Address.toLowerCase() < parameters.token1Address.toLowerCase();
 
             // Set tokens and amounts in correct order
             const [token0, token1] = isOrderMatched
@@ -293,12 +268,12 @@ export class KimService {
                 abi: POOL_ABI,
                 functionName: "globalState",
             });
+            // biome-ignore lint/suspicious/noExplicitAny: value is any
             const globalStateArray = (globalState as { value: any[] }).value;
-            const currentTick = parseInt(globalStateArray[1].toString());
+            const currentTick = Number.parseInt(globalStateArray[1].toString());
 
             // Calculate nearest tick that's divisible by spacing
-            const nearestTick =
-                Math.floor(currentTick / tickSpacing) * tickSpacing;
+            const nearestTick = Math.floor(currentTick / tickSpacing) * tickSpacing;
 
             // Use provided ticks if they exist and are valid numbers
             const tickLower = nearestTick - tickSpacing * 10; // 600 ticks below
@@ -319,8 +294,7 @@ export class KimService {
             });
 
             // Add timestamp calculation
-            const timestamp =
-                Math.floor(Date.now() / 1000) + parameters.deadline;
+            const timestamp = Math.floor(Date.now() / 1000) + parameters.deadline;
 
             const hash = await walletClient.sendTransaction({
                 to: POSITION_MANAGER_ADDRESS,
@@ -353,15 +327,10 @@ export class KimService {
         description:
             "Increase liquidity in an existing position. Returns a transaction hash on success. Once you get a transaction hash, the increase is complete - do not call this function again.",
     })
-    async increaseLiquidity(
-        walletClient: EVMWalletClient,
-        parameters: IncreaseLiquidityParams
-    ): Promise<string> {
+    async increaseLiquidity(walletClient: EVMWalletClient, parameters: IncreaseLiquidityParams): Promise<string> {
         try {
             // Set tokens and amounts in correct order
-            const isOrderMatched =
-                parameters.token0Address.toLowerCase() <
-                parameters.token1Address.toLowerCase();
+            const isOrderMatched = parameters.token0Address.toLowerCase() < parameters.token1Address.toLowerCase();
 
             const [token0, token1] = isOrderMatched
                 ? [parameters.token0Address, parameters.token1Address]
@@ -415,10 +384,7 @@ export class KimService {
         description:
             "Decrease liquidity in an existing position by specifying a percentage (0-100). Returns a transaction hash on success. Once you get a transaction hash, the decrease is complete - do not call this function again.",
     })
-    async decreaseLiquidity(
-        walletClient: EVMWalletClient,
-        parameters: DecreaseLiquidityParams
-    ): Promise<string> {
+    async decreaseLiquidity(walletClient: EVMWalletClient, parameters: DecreaseLiquidityParams): Promise<string> {
         try {
             // Get position info
             const positionResult = await walletClient.read({
@@ -427,12 +393,12 @@ export class KimService {
                 functionName: "positions",
                 args: [parameters.tokenId],
             });
+
+            // biome-ignore lint/suspicious/noExplicitAny: value is any
             const position = (positionResult as { value: any[] }).value;
 
             const currentLiquidity = position[6];
-            const liquidityToRemove =
-                (currentLiquidity * BigInt(parameters.percentage)) /
-                BigInt(100);
+            const liquidityToRemove = (currentLiquidity * BigInt(parameters.percentage)) / BigInt(100);
 
             // Set min amounts to 0 for now
             const amount0Min = 0n;
@@ -466,10 +432,7 @@ export class KimService {
         description:
             "Collect all available tokens from a liquidity position. Can be rewards or tokens removed from a liquidity position. So, should be called after decreasing liquidity as well as on its own.",
     })
-    async collect(
-        walletClient: EVMWalletClient,
-        parameters: CollectParams
-    ): Promise<string> {
+    async collect(walletClient: EVMWalletClient, parameters: CollectParams): Promise<string> {
         try {
             const recipient = walletClient.getAddress();
             // Use max uint128 to collect all available tokens
@@ -497,13 +460,9 @@ export class KimService {
 
     @Tool({
         name: "kim_burn",
-        description:
-            "Burn a liquidity position NFT after all tokens have been collected.",
+        description: "Burn a liquidity position NFT after all tokens have been collected.",
     })
-    async burn(
-        walletClient: EVMWalletClient,
-        parameters: BurnParams
-    ): Promise<string> {
+    async burn(walletClient: EVMWalletClient, parameters: BurnParams): Promise<string> {
         try {
             const hash = await walletClient.sendTransaction({
                 to: POSITION_MANAGER_ADDRESS,
