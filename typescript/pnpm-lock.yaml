@@ -261,7 +261,7 @@ importers:
     dependencies:
       '@ai-sdk/openai':
         specifier: ^1.0.4
-        version: 1.0.11(zod@3.24.1)
+        version: 1.0.5(zod@3.24.1)
       '@goat-sdk/adapter-model-context-protocol':
         specifier: workspace:*
         version: link:../../../packages/adapters/model-context-protocol
@@ -527,9 +527,6 @@ importers:
       '@goat-sdk/plugin-kim':
         specifier: workspace:*
         version: link:../../../packages/plugins/kim
-      '@goat-sdk/plugin-renzo':
-        specifier: workspace:*
-        version: link:../../../packages/plugins/renzo
       '@goat-sdk/wallet-evm':
         specifier: workspace:*
         version: link:../../../packages/wallets/evm
@@ -550,7 +547,7 @@ importers:
     dependencies:
       '@ai-sdk/openai':
         specifier: ^1.0.4
-        version: 1.0.5(zod@3.24.1)
+        version: 1.0.11(zod@3.24.1)
       '@goat-sdk/adapter-vercel-ai':
         specifier: workspace:*
         version: link:../../../packages/adapters/vercel-ai
