@@ -15,7 +15,7 @@ import { parseUnits, formatUnits } from "viem";
 
 export class RenzoService {
     @Tool({
-        name: "renzo_deposit_erc20",
+        name: "deposit_erc20_LST_into_renzo",
         description:
             "Deposit ERC20 LST tokens into Renzo, approve the ERC20 contract to spend the tokens before calling this",
     })
@@ -24,64 +24,26 @@ export class RenzoService {
         parameters: DepositParams
     ) {
         try {
-            console.log(
-                `[Renzo] Starting ERC20 deposit with parameters:`,
-                parameters
-            );
-
-            // if (!walletClient) {
-            //     throw new Error("[Renzo] WalletClient is undefined");
-            // }
-
-            console.log("[Renzo] WalletClient:", walletClient);
-            console.log("[Renzo] Chain:", walletClient.getChain());
-
             const { renzoDepositAddress } = getRenzoAddresses(
                 walletClient.getChain().id
             );
-            console.log(
-                `[Renzo] Using deposit address: ${renzoDepositAddress}`
-            );
-
-            console.log(`[Renzo] Reading deposit token from contract...`);
             const depositToken = await walletClient.read({
                 address: renzoDepositAddress,
                 abi: RENZO_ABI,
                 functionName: "depositToken",
             });
 
-            console.log(`[Renzo] Deposit token type:`, typeof depositToken);
-            console.log(
-                `[Renzo] Deposit token value:`,
-                JSON.stringify(depositToken)
-            );
-
             const depositTokenAddress = (
                 depositToken as { value: `0x${string}` }
             ).value;
-
-            console.log(
-                `[Renzo] Contract deposit token: ${depositTokenAddress}`
-            );
-
             if (
                 parameters.tokenAddress.toLowerCase() !==
                 depositTokenAddress.toLowerCase() // Now we can safely call toLowerCase()
             ) {
-                console.error(`[Renzo] Token mismatch:
-                    Provided: ${parameters.tokenAddress}
-                    Expected: ${depositTokenAddress}`);
                 throw new Error(
                     `Invalid token: ${parameters.tokenAddress}. Expected deposit token: ${depositTokenAddress}`
                 );
             }
-            console.log(`[Renzo] Token validation successful`);
-
-            console.log(`[Renzo] Initiating deposit transaction with:
-                Amount In: ${parameters.amountIn}
-                Min Out: ${parameters.minOut}
-                Deadline: ${parameters.deadline}`);
-
             const deadline = BigInt(Math.floor(Date.now() / 1000) + 300); // current time + 5 minutes
 
             const hash = await walletClient.sendTransaction({
@@ -94,19 +56,14 @@ export class RenzoService {
                     deadline, // Use the calculated deadline
                 ],
             });
-            console.log(
-                `[Renzo] Deposit transaction successful. Hash: ${hash.hash}`
-            );
-
             return hash.hash;
         } catch (error) {
-            console.error(`[Renzo] Deposit failed with error:`, error);
             throw Error(`Failed to deposit ERC20: ${error}`);
         }
     }
 
     @Tool({
-        name: "renzo_deposit_eth",
+        name: "deposit_eth_into_renzo",
         description: "Deposit ETH into Renzo",
     })
     async depositETH(
@@ -114,25 +71,11 @@ export class RenzoService {
         parameters: DepositETHParams
     ): Promise<string> {
         try {
-            console.log(
-                `[Renzo] Starting ETH deposit with parameters:`,
-                parameters
-            );
-
             const { renzoDepositAddress } = getRenzoAddresses(
                 walletClient.getChain().id
             );
-            console.log(
-                `[Renzo] Using deposit address: ${renzoDepositAddress}`
-            );
-
             const minOut = parseUnits(parameters.minOut, 18);
             const value = parseUnits(parameters.value, 18);
-
-            console.log(`[Renzo] Initiating ETH deposit transaction with:
-                Value: ${parameters.value} ETH
-                Min Out: ${parameters.minOut}
-                Deadline: ${parameters.deadline}`);
 
             const deadline = BigInt(Math.floor(Date.now() / 1000) + 300); // 5 minutes from now
 
@@ -144,19 +87,14 @@ export class RenzoService {
                 value,
             });
 
-            console.log(
-                `[Renzo] ETH deposit transaction successful. Hash: ${hash.hash}`
-            );
-
             return hash.hash;
         } catch (error) {
-            console.error(`[Renzo] ETH deposit failed with error:`, error);
             throw Error(`Failed to deposit ETH: ${error}`);
         }
     }
 
     @Tool({
-        name: "renzo_check_ezeth_balance",
+        name: "check_ezeth_balance_in_renzo",
         description: "Check the ezETH balance of an address",
     })
     async getEzEthBalance(
@@ -164,48 +102,25 @@ export class RenzoService {
         parameters: BalanceOfParams
     ): Promise<string> {
         try {
-            console.log(
-                `[Renzo] Checking ezETH balance for address:`,
-                parameters.address
-            );
-
             const { l2EzEthAddress } = getRenzoAddresses(
                 walletClient.getChain().id
             );
-            console.log(
-                `[Renzo] Using ezETH contract address: ${l2EzEthAddress}`
-            );
-
             const balanceResult = await walletClient.read({
                 address: l2EzEthAddress,
                 abi: EZETH_ABI,
                 functionName: "balanceOf",
                 args: [parameters.address],
             });
-
-            console.log(`[Renzo] Balance result type:`, typeof balanceResult);
-            console.log(
-                `[Renzo] Balance result value:`,
-                JSON.stringify(balanceResult, (_, value) =>
-                    typeof value === "bigint" ? value.toString() : value
-                )
-            );
-
             const balance = (balanceResult as { value: bigint }).value;
             const formattedBalance = formatUnits(balance, 18);
-            console.log(
-                `[Renzo] ezETH balance for ${parameters.address}: ${formattedBalance}`
-            );
-
             return formattedBalance;
         } catch (error) {
-            console.error(`[Renzo] Failed to get ezETH balance:`, error);
             throw Error(`Failed to get ezETH balance: ${error}`);
         }
     }
 
     @Tool({
-        name: "renzo_approve_deposit",
+        name: "approve_deposit_erc20_into_renzo",
         description:
             "Approve Renzo deposit contract to spend tokens. Call this before calling erc20 deposit function.",
     })
@@ -240,14 +155,8 @@ export class RenzoService {
             const { renzoDepositAddress } = getRenzoAddresses(
                 walletClient.getChain().id
             );
-            console.log(
-                `[Renzo] Deposit address for chain ${
-                    walletClient.getChain().id
-                }: ${renzoDepositAddress}`
-            );
             return renzoDepositAddress;
         } catch (error) {
-            console.error(`[Renzo] Failed to get deposit address:`, error);
             throw Error(`Failed to get Renzo deposit address: ${error}`);
         }
     }
