@@ -677,9 +677,24 @@ export class IroncladService {
                 functionName: "getTroveDebt",
                 args: [walletClient.getAddress(), vaultAddress],
             });
-            const troveDebt = (troveDebtResult as { value: bigint }).value;
+            const totalDebt = (troveDebtResult as { value: bigint }).value;
 
-            console.log(`[Ironclad] Total Trove Debt: ${troveDebt.toString()}`);
+            // LUSD_GAS_COMPENSATION is typically 10 * 10^18 (10 iUSD)
+            const LUSD_GAS_COMPENSATION = BigInt("10000000000000000000"); // 10 iUSD in wei
+            const actualDebt = totalDebt - LUSD_GAS_COMPENSATION;
+
+            console.log(
+                `[Ironclad] Total Trove Debt: ${formatUnits(totalDebt, 18)}`
+            );
+            console.log(
+                `[Ironclad] Liquidation Reserve: ${formatUnits(
+                    LUSD_GAS_COMPENSATION,
+                    18
+                )}`
+            );
+            console.log(
+                `[Ironclad] Actual Debt: ${formatUnits(actualDebt, 18)}`
+            );
 
             // Check and handle iUSD allowance
             const allowance = await walletClient.read({
@@ -689,13 +704,13 @@ export class IroncladService {
                 args: [walletClient.getAddress(), BORROWER_ADDRESS],
             });
 
-            if (Number(allowance) < Number(troveDebt)) {
+            if (Number(allowance) < Number(actualDebt)) {
                 console.log(`[Ironclad] Approving iUSD for repayment...`);
                 await walletClient.sendTransaction({
                     to: IUSD_ADDRESS,
                     abi: ERC20_ABI,
                     functionName: "approve",
-                    args: [BORROWER_ADDRESS, troveDebt],
+                    args: [BORROWER_ADDRESS, actualDebt],
                 });
                 console.log(`[Ironclad] ✅ iUSD approval successful`);
             }
