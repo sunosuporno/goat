@@ -1,6 +1,6 @@
 import readline from "node:readline";
 
-import { createXai } from "@ai-sdk/xai";
+import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
 
 import { http } from "viem";
@@ -11,7 +11,6 @@ import { mode } from "viem/chains";
 import { getOnChainTools } from "@goat-sdk/adapter-vercel-ai";
 import { MODE, USDC, erc20 } from "@goat-sdk/plugin-erc20";
 import { kim } from "@goat-sdk/plugin-kim";
-import { ironclad } from "@goat-sdk/plugin-ironclad";
 
 import { sendETH } from "@goat-sdk/wallet-evm";
 import { viem } from "@goat-sdk/wallet-viem";
@@ -28,19 +27,10 @@ const walletClient = createWalletClient({
     chain: mode,
 });
 
-const xai = createXai({
-    apiKey: process.env.GROK_API_KEY,
-});
-
 (async () => {
     const tools = await getOnChainTools({
         wallet: viem(walletClient),
-        plugins: [
-            sendETH(),
-            erc20({ tokens: [USDC, MODE] }),
-            kim(),
-            ironclad(),
-        ],
+        plugins: [sendETH(), erc20({ tokens: [USDC, MODE] }), kim()],
     });
 
     const rl = readline.createInterface({
@@ -67,7 +57,7 @@ const xai = createXai({
         console.log("\n-------------------\n");
         try {
             const result = await generateText({
-                model: xai("grok-beta"),
+                model: openai("gpt-4o-mini"),
                 tools: tools,
                 maxSteps: 10,
                 prompt: prompt,
