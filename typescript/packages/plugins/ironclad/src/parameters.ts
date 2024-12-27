@@ -32,16 +32,16 @@ export class LoopWithdrawParameters extends createToolParameters(
 
 export class BorrowIUSDParameters extends createToolParameters(
     z.object({
-        collateralTokenAddress: z
+        tokenAddress: z
             .string()
-            .describe("The address of the token to deposit as collateral"),
-        collateralAmount: z
+            .describe("The address of the token to deposit"),
+        tokenAmount: z
             .string()
-            .describe("Amount of collateral to deposit"),
+            .describe("Amount of token to deposit in base units"),
         maxFeePercentage: z
             .string()
             .describe("Maximum fee percentage for the borrowing operation"),
-        lusdAmount: z.string().describe("Amount of LUSD to borrow"),
+        iUSDAmount: z.string().describe("Amount of iUSD to borrow"),
         upperHint: z
             .string()
             .optional()
@@ -57,15 +57,15 @@ export class BorrowIUSDParameters extends createToolParameters(
 
 export class RepayIUSDParameters extends createToolParameters(
     z.object({
-        collateralToken: z.string().describe("The collateral token used"),
+        tokenAddress: z.string().describe("The token address used"),
     })
 ) {}
 
 export class MonitorPositionParameters extends createToolParameters(
     z.object({
-        collateralToken: z
+        tokenAddress: z
             .string()
-            .describe("The collateral token to check position for"),
+            .describe("The token address to check position for"),
     })
 ) {}
 
