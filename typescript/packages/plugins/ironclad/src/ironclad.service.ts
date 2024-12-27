@@ -36,7 +36,7 @@ export class IroncladService {
     constructor() {}
 
     @Tool({
-        name: "ironclad_loop_deposit",
+        name: "loop_deposit_ironclad",
         description:
             "Perform a looped deposit (recursive borrowing) on Ironclad. Send the amount of the asset (in base units) you want to deposit as the initial amount.",
     })
@@ -176,7 +176,7 @@ export class IroncladService {
     }
 
     @Tool({
-        name: "ironclad_loop_withdraw",
+        name: "loop_withdraw_ironclad",
         description: "Withdraw a looped position on Ironclad",
     })
     async loopWithdraw(
@@ -299,7 +299,7 @@ export class IroncladService {
     }
 
     @Tool({
-        name: "ironclad_monitor_loop_position",
+        name: "monitor_loop_position_ironclad",
         description: "Monitor health of a looped position on Ironclad",
     })
     async monitorLoopPosition(
@@ -378,7 +378,7 @@ export class IroncladService {
     }
 
     @Tool({
-        name: "ironclad_borrow_iusd",
+        name: "borrow_iusd_ironclad",
         description: "Deposit collateral and borrow iUSD against it",
     })
     async borrowIUSD(
@@ -477,7 +477,7 @@ export class IroncladService {
     }
 
     @Tool({
-        name: "ironclad_repay_iusd",
+        name: "repay_iusd_ironclad",
         description: "Repay all iUSD and close the Trove position",
     })
     async repayIUSD(
@@ -532,7 +532,7 @@ export class IroncladService {
     }
 
     @Tool({
-        name: "ironclad_monitor_position",
+        name: "monitor_position_ironclad",
         description: "Monitor health of a Trove position",
     })
     async monitorPosition(
@@ -603,7 +603,7 @@ export class IroncladService {
     }
 
     @Tool({
-        name: "ironclad_calculate_max_withdrawable",
+        name: "calculate_max_withdrawable_ironclad",
         description:
             "Calculate maximum withdrawable amount while maintaining health factor",
     })
