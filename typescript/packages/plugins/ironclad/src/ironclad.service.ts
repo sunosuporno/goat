@@ -45,18 +45,6 @@ export class IroncladService {
         parameters: LoopDepositParameters
     ): Promise<LoopPosition> {
         try {
-            console.log(
-                `[Ironclad] ====== Starting Loop Deposit Operation ======`
-            );
-            console.log(`[Ironclad] Asset Address: ${parameters.assetAddress}`);
-            console.log(
-                `[Ironclad] Initial Amount: ${parameters.initialAmount}`
-            );
-            console.log(`[Ironclad] Number of Loops: ${parameters.numLoops}`);
-            console.log(
-                `[Ironclad] User Address: ${walletClient.getAddress()}`
-            );
-
             const position: LoopPosition = {
                 borrowedAmounts: [],
                 totalDeposited: "0",
@@ -64,7 +52,6 @@ export class IroncladService {
             };
 
             const asset = parameters.assetAddress;
-            console.log(`[Ironclad] Checking allowance for initial deposit...`);
             const allowanceResult = await walletClient.read({
                 address: asset as `0x${string}`,
                 abi: ERC20_ABI,
@@ -73,27 +60,15 @@ export class IroncladService {
             });
             const allowance = (allowanceResult as { value: bigint }).value;
 
-            console.log(`[Ironclad] Current allowance: ${allowance}`);
-            console.log(
-                `[Ironclad] Required allowance: ${parameters.initialAmount}`
-            );
-
             if (Number(allowance) < Number(parameters.initialAmount)) {
-                console.log(`[Ironclad] Insufficient allowance, approving...`);
                 await walletClient.sendTransaction({
                     to: asset,
                     abi: ERC20_ABI,
                     functionName: "approve",
                     args: [LENDING_POOL_ADDRESS, parameters.initialAmount],
                 });
-                console.log(`[Ironclad] Approval transaction successful`);
-            } else {
-                console.log(`[Ironclad] Sufficient allowance already exists`);
             }
 
-            console.log(
-                `[Ironclad] Performing initial deposit of ${parameters.initialAmount}`
-            );
             // Initial deposit
             await walletClient.sendTransaction({
                 to: LENDING_POOL_ADDRESS,
@@ -107,21 +82,12 @@ export class IroncladService {
                 ],
             });
 
-            console.log(`[Ironclad] Initial deposit successful`);
-
             position.totalDeposited = parameters.initialAmount;
             let currentAmount = parameters.initialAmount;
 
             // Execute loops
             for (let i = 0; i < parameters.numLoops; i++) {
-                console.log(
-                    `\n[Ironclad] ====== Starting Loop ${i + 1}/${
-                        parameters.numLoops
-                    } ======`
-                );
-
                 // Get reserve configuration
-                console.log(`[Ironclad] Fetching reserve configuration...`);
                 const userReserveDataResult = await walletClient.read({
                     address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
                     abi: PROTOCOL_DATA_PROVIDER_ABI,
@@ -142,18 +108,13 @@ export class IroncladService {
                     .value;
 
                 const ltv = Number(reserveConfig[1]);
-                console.log(`[Ironclad] LTV from protocol: ${ltv / 100}%`);
 
                 const borrowAmount = (
                     (Number(currentAmount) * ltv) /
                     10000
                 ).toString();
-                console.log(
-                    `[Ironclad] Calculated borrow amount: ${borrowAmount}`
-                );
 
                 // Borrow
-                console.log(`[Ironclad] Executing borrow transaction...`);
                 await walletClient.sendTransaction({
                     to: LENDING_POOL_ADDRESS,
                     abi: LENDING_POOL_ABI,
@@ -166,12 +127,7 @@ export class IroncladService {
                         walletClient.getAddress(),
                     ],
                 });
-                console.log(`[Ironclad] Borrow successful`);
 
-                // Allowance check
-                console.log(
-                    `[Ironclad] Checking allowance for subsequent deposit...`
-                );
                 const loopAllowanceResult = await walletClient.read({
                     address: asset as `0x${string}`,
                     abi: ERC20_ABI,
@@ -182,20 +138,15 @@ export class IroncladService {
                     .value;
 
                 if (Number(loopAllowance) < Number(borrowAmount)) {
-                    console.log(
-                        `[Ironclad] Insufficient allowance, approving...`
-                    );
                     await walletClient.sendTransaction({
                         to: asset,
                         abi: ERC20_ABI,
                         functionName: "approve",
                         args: [LENDING_POOL_ADDRESS, borrowAmount],
                     });
-                    console.log(`[Ironclad] Approval successful`);
                 }
 
                 // Deposit
-                console.log(`[Ironclad] Depositing borrowed amount...`);
                 await walletClient.sendTransaction({
                     to: LENDING_POOL_ADDRESS,
                     abi: LENDING_POOL_ABI,
@@ -207,7 +158,6 @@ export class IroncladService {
                         parameters.referralCode,
                     ],
                 });
-                console.log(`[Ironclad] Deposit successful`);
 
                 // Update position tracking
                 position.borrowedAmounts.push(borrowAmount);
@@ -218,34 +168,9 @@ export class IroncladService {
                     Number(position.totalDeposited) + Number(borrowAmount)
                 ).toString();
                 currentAmount = borrowAmount;
-
-                console.log(`[Ironclad] Loop ${i + 1} Summary:`);
-                console.log(`  - Amount Borrowed: ${borrowAmount}`);
-                console.log(`  - Total Borrowed: ${position.totalBorrowed}`);
-                console.log(`  - Total Deposited: ${position.totalDeposited}`);
-                console.log(
-                    `[Ironclad] ====== Loop ${i + 1} Complete ======\n`
-                );
             }
-
-            console.log(
-                `\n[Ironclad] ====== Loop Deposit Operation Complete ======`
-            );
-            console.log(`[Ironclad] Final Position Summary:`);
-            console.log(`  - Total Deposited: ${position.totalDeposited}`);
-            console.log(`  - Total Borrowed: ${position.totalBorrowed}`);
-            console.log(
-                `  - Number of Loops Completed: ${parameters.numLoops}`
-            );
-            console.log(
-                `[Ironclad] ==========================================\n`
-            );
-
             return position;
         } catch (error) {
-            console.error(`[Ironclad] ❌ Error in loop deposit operation:`);
-            console.error(`[Ironclad] ${error}`);
-            console.error(`[Ironclad] Stack trace:`, error);
             throw Error(`Failed to execute loop deposit: ${error}`);
         }
     }
@@ -259,14 +184,6 @@ export class IroncladService {
         parameters: LoopWithdrawParameters
     ): Promise<string> {
         try {
-            console.log(`[Ironclad] ====== Starting Loop Withdrawal ======`);
-            console.log(`[Ironclad] Asset Address: ${parameters.assetAddress}`);
-            console.log(
-                `[Ironclad] User Address: ${walletClient.getAddress()}`
-            );
-
-            // Get initial debt position
-            console.log(`[Ironclad] Fetching initial position data...`);
             const userReserveDataResult = await walletClient.read({
                 address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
                 abi: PROTOCOL_DATA_PROVIDER_ABI,
@@ -277,31 +194,15 @@ export class IroncladService {
             const userReserveData = (userReserveDataResult as { value: any[] })
                 .value;
             let remainingDebt = userReserveData[2]; // currentVariableDebt
-            console.log(`[Ironclad] Initial variable debt: ${remainingDebt}`);
 
             let withdrawalCount = 1;
             while (remainingDebt > 0n) {
-                console.log(
-                    `\n[Ironclad] === Withdrawal Loop ${withdrawalCount} ===`
-                );
-                console.log(`[Ironclad] Remaining debt: ${remainingDebt}`);
-
-                // Calculate max withdrawable amount
-                console.log(
-                    `[Ironclad] Calculating maximum withdrawable amount...`
-                );
                 const maxWithdrawable =
                     await this.calculateMaxWithdrawableAmount(walletClient, {
                         assetAddress: parameters.assetAddress,
                     });
-                console.log(
-                    `[Ironclad] Max withdrawable amount: ${maxWithdrawable}`
-                );
 
                 if (maxWithdrawable === 0n) {
-                    console.error(
-                        `[Ironclad] ❌ Cannot proceed: Zero withdrawable amount`
-                    );
                     throw new Error(
                         "Cannot withdraw any more funds while maintaining health factor"
                     );
@@ -313,13 +214,6 @@ export class IroncladService {
                     remainingDebt === 0n
                         ? maxWithdrawable
                         : (maxWithdrawable * 995n) / 1000n;
-                console.log(
-                    `[Ironclad] Adjusted withdrawal amount: ${withdrawAmount}`
-                );
-                console.log(
-                    `[Ironclad] Using full amount: ${remainingDebt === 0n}`
-                );
-
                 // Withdraw the calculated amount
                 await walletClient.sendTransaction({
                     to: LENDING_POOL_ADDRESS,
@@ -331,10 +225,6 @@ export class IroncladService {
                         walletClient.getAddress(),
                     ],
                 });
-                console.log(`[Ironclad] ✅ Withdrawal successful`);
-
-                // Check and handle allowance
-                console.log(`[Ironclad] Checking repayment allowance...`);
                 const allowanceResult = await walletClient.read({
                     address: parameters.assetAddress as `0x${string}`,
                     abi: ERC20_ABI,
@@ -344,22 +234,15 @@ export class IroncladService {
                 const allowance = (allowanceResult as { value: bigint }).value;
 
                 if (allowance < withdrawAmount) {
-                    console.log(
-                        `[Ironclad] Insufficient allowance, approving...`
-                    );
                     await walletClient.sendTransaction({
                         to: parameters.assetAddress,
                         abi: ERC20_ABI,
                         functionName: "approve",
                         args: [LENDING_POOL_ADDRESS, withdrawAmount],
                     });
-                    console.log(`[Ironclad] ✅ Approval successful`);
-                } else {
-                    console.log(`[Ironclad] Sufficient allowance exists`);
                 }
 
                 // Repay
-                console.log(`[Ironclad] Executing repayment transaction...`);
                 await walletClient.sendTransaction({
                     to: LENDING_POOL_ADDRESS,
                     abi: LENDING_POOL_ABI,
@@ -371,7 +254,6 @@ export class IroncladService {
                         walletClient.getAddress(),
                     ],
                 });
-                console.log(`[Ironclad] ✅ Repayment successful`);
 
                 // After repayment, get updated debt from protocol
                 const updatedReserveData = await walletClient.read({
@@ -382,9 +264,6 @@ export class IroncladService {
                 });
                 remainingDebt = (updatedReserveData as { value: any[] })
                     .value[2];
-                console.log(
-                    `[Ironclad] Updated remaining debt from protocol: ${remainingDebt}`
-                );
                 withdrawalCount++;
             }
 
@@ -399,11 +278,6 @@ export class IroncladService {
                 .value[0]; // aToken balance
 
             if (remainingDeposit > 0n) {
-                console.log(`\n[Ironclad] === Final Withdrawal ===`);
-                console.log(
-                    `[Ironclad] Remaining deposit to withdraw: ${remainingDeposit}`
-                );
-
                 // Withdraw all remaining deposits
                 await walletClient.sendTransaction({
                     to: LENDING_POOL_ADDRESS,
@@ -415,20 +289,11 @@ export class IroncladService {
                         walletClient.getAddress(),
                     ],
                 });
-                console.log(`[Ironclad] ✅ Final withdrawal successful`);
             }
-
-            console.log(`\n[Ironclad] ====== Loop Withdrawal Complete ======`);
-            console.log(
-                `[Ironclad] Total withdrawal loops: ${withdrawalCount - 1}`
-            );
-            console.log(`[Ironclad] Final debt: ${remainingDebt}`);
-
             return `Successfully unwound position in ${
                 withdrawalCount - 1
             } loops`;
         } catch (error) {
-            console.error(`[Ironclad] ❌ Error in loop withdraw:`, error);
             throw Error(`Failed to execute loop withdraw: ${error}`);
         }
     }
@@ -448,9 +313,7 @@ export class IroncladService {
         liquidationThreshold: string;
     }> {
         try {
-            console.log(`[Ironclad] ====== Monitoring Loop Position ======`);
             const asset = parameters.tokenAddress;
-            console.log(`[Ironclad] Asset Address: ${asset}`);
 
             const decimalsResult = await walletClient.read({
                 address: asset as `0x${string}`,
@@ -458,10 +321,8 @@ export class IroncladService {
                 functionName: "decimals",
             });
             const decimals = (decimalsResult as { value: number }).value;
-            console.log(`[Ironclad] Asset Decimals: ${decimals}`);
 
             // Get user's reserve data
-            console.log(`[Ironclad] Fetching user reserve data...`);
             const userReserveDataResult = await walletClient.read({
                 address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
                 abi: PROTOCOL_DATA_PROVIDER_ABI,
@@ -472,7 +333,6 @@ export class IroncladService {
                 .value;
 
             // Get reserve configuration
-            console.log(`[Ironclad] Fetching reserve configuration...`);
             const reserveConfigResult = await walletClient.read({
                 address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
                 abi: PROTOCOL_DATA_PROVIDER_ABI,
@@ -486,15 +346,6 @@ export class IroncladService {
             const totalBorrowed = formatUnits(userReserveData[2], decimals);
             const liquidationThreshold = Number(reserveConfig[2]) / 10000;
 
-            console.log(`[Ironclad] Position Details:`);
-            console.log(`  - Total Collateral: ${totalCollateral}`);
-            console.log(`  - Total Borrowed: ${totalBorrowed}`);
-            console.log(
-                `  - Liquidation Threshold: ${(
-                    liquidationThreshold * 100
-                ).toFixed(2)}%`
-            );
-
             // Calculate current LTV and health factor
             const currentLTV =
                 totalBorrowed === "0"
@@ -503,7 +354,6 @@ export class IroncladService {
                           (Number(totalBorrowed) / Number(totalCollateral)) *
                           100
                       ).toFixed(2);
-            console.log(`  - Current LTV: ${currentLTV}%`);
 
             const healthFactor =
                 totalBorrowed === "0"
@@ -512,9 +362,6 @@ export class IroncladService {
                           (Number(totalCollateral) * liquidationThreshold) /
                           Number(totalBorrowed)
                       ).toFixed(2);
-            console.log(`  - Health Factor: ${healthFactor}`);
-
-            console.log(`[Ironclad] ====== Monitoring Complete ======\n`);
 
             return {
                 totalCollateral,
@@ -526,7 +373,6 @@ export class IroncladService {
                 )}%`,
             };
         } catch (error) {
-            console.error(`[Ironclad] ❌ Error monitoring position:`, error);
             throw Error(`Failed to monitor loop position: ${error}`);
         }
     }
@@ -540,14 +386,7 @@ export class IroncladService {
         parameters: BorrowIUSDParameters
     ): Promise<string> {
         try {
-            console.log(
-                `[Ironclad] ====== Starting iUSD Borrow Operation ======`
-            );
-
             const vaultAddress = getVaultAddress(parameters.tokenAddress);
-            console.log(
-                `[Ironclad] Step 1: Depositing USDC into ic-USDC vault`
-            );
 
             // Check USDC allowance for vault
             const usdcAllowanceResult = await walletClient.read({
@@ -561,7 +400,6 @@ export class IroncladService {
 
             // Approve USDC if needed
             if (Number(usdcAllowance) < Number(parameters.tokenAmount)) {
-                console.log(`[Ironclad] Approving USDC for ic-USDC vault...`);
                 await walletClient.sendTransaction({
                     to: parameters.tokenAddress,
                     abi: ERC20_ABI,
@@ -571,7 +409,6 @@ export class IroncladService {
             }
 
             // Deposit USDC into vault
-            console.log(`[Ironclad] Depositing USDC into vault...`);
             await walletClient.sendTransaction({
                 to: vaultAddress,
                 abi: IC_VAULT_ABI,
@@ -580,7 +417,6 @@ export class IroncladService {
             });
 
             // Step 2: Open Trove with ic-USDC
-            console.log(`[Ironclad] Step 2: Opening Trove with ic-USDC`);
 
             // Check ic-USDC allowance for borrower
             const icUSDCAllowanceResult = await walletClient.read({
@@ -594,7 +430,6 @@ export class IroncladService {
 
             // Approve ic-USDC if needed
             if (Number(icUSDCAllowance) < Number(parameters.tokenAmount)) {
-                console.log(`[Ironclad] Approving ic-USDC for borrower...`);
                 await walletClient.sendTransaction({
                     to: vaultAddress,
                     abi: ERC20_ABI,
@@ -604,17 +439,12 @@ export class IroncladService {
             }
 
             // Calculate hints first
-            console.log(`[Ironclad] Calculating hints...`);
             const { upperHint, lowerHint } = await this.getHints(
                 walletClient,
                 vaultAddress,
                 BigInt(parameters.tokenAmount),
                 BigInt(parameters.iUSDAmount)
             );
-            console.log(`[Ironclad] Hints calculated:`);
-            console.log(`  - Upper Hint: ${upperHint}`);
-            console.log(`  - Lower Hint: ${lowerHint}`);
-
             // Prepare openTrove parameters
             const openTroveParams = {
                 _collateral: vaultAddress,
@@ -626,7 +456,6 @@ export class IroncladService {
             };
 
             // Execute openTrove transaction
-            console.log(`[Ironclad] Opening trove...`);
             const txHash = await walletClient.sendTransaction({
                 to: BORROWER_ADDRESS as `0x${string}`,
                 abi: BORROWER_ABI,
@@ -641,12 +470,8 @@ export class IroncladService {
                 ],
             });
 
-            console.log(`\n[Ironclad] ====== Borrow Operation Complete ======`);
-            console.log(`[Ironclad] Transaction hash: ${txHash.hash}`);
-
             return `Successfully deposited ${parameters.tokenAmount} USDC into ic-USDC vault and borrowed ${parameters.iUSDAmount} iUSD. Transaction: ${txHash.hash}`;
         } catch (error) {
-            console.error(`[Ironclad] ❌ Error in borrow operation:`, error);
             throw Error(`Failed to borrow iUSD: ${error}`);
         }
     }
@@ -660,14 +485,6 @@ export class IroncladService {
         parameters: RepayIUSDParameters
     ): Promise<string> {
         try {
-            console.log(
-                `[Ironclad] ====== Starting Trove Close Operation ======`
-            );
-            console.log(`[Ironclad] Token Address: ${parameters.tokenAddress}`);
-            console.log(
-                `[Ironclad] User Address: ${walletClient.getAddress()}`
-            );
-
             const vaultAddress = getVaultAddress(parameters.tokenAddress);
 
             // First, we need to get the total debt of the Trove
@@ -683,19 +500,6 @@ export class IroncladService {
             const LUSD_GAS_COMPENSATION = BigInt("10000000000000000000"); // 10 iUSD in wei
             const actualDebt = totalDebt - LUSD_GAS_COMPENSATION;
 
-            console.log(
-                `[Ironclad] Total Trove Debt: ${formatUnits(totalDebt, 18)}`
-            );
-            console.log(
-                `[Ironclad] Liquidation Reserve: ${formatUnits(
-                    LUSD_GAS_COMPENSATION,
-                    18
-                )}`
-            );
-            console.log(
-                `[Ironclad] Actual Debt: ${formatUnits(actualDebt, 18)}`
-            );
-
             // Check and handle iUSD allowance
             const allowance = await walletClient.read({
                 address: IUSD_ADDRESS as `0x${string}`,
@@ -705,18 +509,15 @@ export class IroncladService {
             });
 
             if (Number(allowance) < Number(actualDebt)) {
-                console.log(`[Ironclad] Approving iUSD for repayment...`);
                 await walletClient.sendTransaction({
                     to: IUSD_ADDRESS,
                     abi: ERC20_ABI,
                     functionName: "approve",
                     args: [BORROWER_ADDRESS, actualDebt],
                 });
-                console.log(`[Ironclad] ✅ iUSD approval successful`);
             }
 
             // Close Trove
-            console.log(`[Ironclad] Closing Trove...`);
             const txHash = await walletClient.sendTransaction({
                 to: BORROWER_ADDRESS,
                 abi: BORROWER_ABI,
@@ -724,14 +525,8 @@ export class IroncladService {
                 args: [vaultAddress],
             });
 
-            console.log(
-                `\n[Ironclad] ====== Trove Close Operation Complete ======`
-            );
-            console.log(`[Ironclad] Transaction hash: ${txHash.hash}`);
-
             return txHash.hash;
         } catch (error) {
-            console.error(`[Ironclad] ❌ Error in close operation:`, error);
             throw Error(`Failed to close Trove: ${error}`);
         }
     }
@@ -749,7 +544,6 @@ export class IroncladService {
         troveStatus: string;
     }> {
         try {
-            console.log(`[Ironclad] ====== Monitoring Trove Position ======`);
             const vaultAddress = getVaultAddress(parameters.tokenAddress);
 
             // Get token decimals
@@ -804,7 +598,6 @@ export class IroncladService {
                     statusMap[status as keyof typeof statusMap] || "unknown",
             };
         } catch (error) {
-            console.error(`[Ironclad] ❌ Error monitoring position:`, error);
             throw Error(`Failed to monitor position: ${error}`);
         }
     }
@@ -842,17 +635,11 @@ export class IroncladService {
         const currentVariableDebt = userReserveData[2]; // Current debt
         const liquidationThreshold = reserveConfig[2]; // In basis points (e.g., 8500 = 85%)
 
-        console.log(
-            `[Ironclad] Current aToken balance: ${currentATokenBalance}`
-        );
-        console.log(`[Ironclad] Current variable debt: ${currentVariableDebt}`);
-
         let remainingDebt: bigint;
         // Update remaining debt from protocol data
         remainingDebt = currentVariableDebt;
 
         if (remainingDebt === 0n) {
-            console.log(`[Ironclad] No remaining debt, exiting loop`);
             return currentATokenBalance; // Can withdraw everything if no debt
         }
 
@@ -877,11 +664,6 @@ export class IroncladService {
         collateralAmount: bigint,
         debt: bigint
     ): Promise<{ upperHint: string; lowerHint: string }> {
-        console.log(`[Ironclad] ====== Starting Hint Calculation ======`);
-        console.log(`[Ironclad] Collateral Address: ${collateral}`);
-        console.log(`[Ironclad] Collateral Amount: ${collateralAmount}`);
-        console.log(`[Ironclad] Debt Amount: ${debt}`);
-
         const decimals = (
             await walletClient.read({
                 address: collateral,
@@ -889,7 +671,6 @@ export class IroncladService {
                 functionName: "decimals",
             })
         ).value;
-        console.log(`[Ironclad] Collateral Decimals: ${decimals}`);
 
         const troveCount = (
             await walletClient.read({
@@ -899,12 +680,8 @@ export class IroncladService {
                 args: [collateral],
             })
         ).value;
-        console.log(`[Ironclad] Total Troves in System: ${troveCount}`);
 
         const numTrials = Math.ceil(15 * Math.sqrt(Number(troveCount)));
-        console.log(`[Ironclad] Calculated Number of Trials: ${numTrials}`);
-
-        console.log(`[Ironclad] Calculating NICR...`);
         const NICR = (
             await walletClient.read({
                 address: HINT_HELPERS_ADDRESS,
@@ -913,11 +690,8 @@ export class IroncladService {
                 args: [collateralAmount, debt, decimals],
             })
         ).value;
-        console.log(`[Ironclad] Nominal Collateral Ratio: ${NICR}`);
 
         const randomSeed = Math.floor(Math.random() * 1000000);
-        console.log(`[Ironclad] Generated Random Seed: ${randomSeed}`);
-        console.log(`[Ironclad] Getting approximate hint...`);
 
         const result = await walletClient.read({
             address: HINT_HELPERS_ADDRESS,
@@ -930,9 +704,6 @@ export class IroncladService {
         const [hintAddress] = (
             result as { value: [`0x${string}`, bigint, bigint] }
         ).value;
-        console.log(`[Ironclad] Hint Address: ${hintAddress}`);
-        console.log(`[Ironclad] Using zero address as lower hint`);
-        console.log(`[Ironclad] ====== Hint Calculation Complete ======\n`);
 
         return {
             upperHint: hintAddress,
