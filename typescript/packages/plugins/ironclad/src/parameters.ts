@@ -8,7 +8,9 @@ export class LoopDepositParameters extends createToolParameters(
             .describe("The address of the asset to deposit and borrow"),
         initialAmount: z
             .string()
-            .describe("The initial amount of the asset to deposit"),
+            .describe(
+                "The initial amount of the asset to deposit in base units"
+            ),
         numLoops: z
             .number()
             .min(1)
@@ -26,7 +28,7 @@ export class LoopWithdrawParameters extends createToolParameters(
     z.object({
         assetAddress: z
             .string()
-            .describe("The address of the asset to withdraw"),
+            .describe("The address of the asset to withdraw in base units"),
     })
 ) {}
 
