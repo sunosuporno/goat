@@ -518,12 +518,34 @@ export class IroncladService {
             }
 
             // Close Trove
+            // Close position on the trove
             const txHash = await walletClient.sendTransaction({
                 to: BORROWER_ADDRESS,
                 abi: BORROWER_ABI,
                 functionName: "closeTrove",
                 args: [vaultAddress],
             });
+
+            // Check collateral balance
+            const collateralBalanceResult = await walletClient.read({
+                address: vaultAddress as `0x${string}`,
+                abi: ERC20_ABI,
+                functionName: "balanceOf",
+                args: [walletClient.getAddress()],
+            });
+            const collateralBalance = (
+                collateralBalanceResult as { value: bigint }
+            ).value;
+
+            if (collateralBalance > 0n) {
+                // Withdraw all collateral
+                await walletClient.sendTransaction({
+                    to: vaultAddress,
+                    abi: IC_VAULT_ABI,
+                    functionName: "withdraw",
+                    args: [collateralBalance],
+                });
+            }
 
             return txHash.hash;
         } catch (error) {
