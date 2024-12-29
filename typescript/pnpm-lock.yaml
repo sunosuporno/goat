@@ -515,6 +515,9 @@ importers:
       '@ai-sdk/openai':
         specifier: ^1.0.4
         version: 1.0.5(zod@3.24.1)
+      '@ai-sdk/xai':
+        specifier: 1.0.9
+        version: 1.0.9(zod@3.24.1)
       '@goat-sdk/adapter-vercel-ai':
         specifier: workspace:*
         version: link:../../../packages/adapters/vercel-ai
@@ -527,6 +530,9 @@ importers:
       '@goat-sdk/plugin-erc721':
         specifier: workspace:*
         version: link:../../../packages/plugins/erc721
+      '@goat-sdk/plugin-ironclad':
+        specifier: workspace:*
+        version: link:../../../packages/plugins/ironclad
       '@goat-sdk/plugin-kim':
         specifier: workspace:*
         version: link:../../../packages/plugins/kim
@@ -1393,6 +1399,12 @@ packages:
     peerDependencies:
       zod: ^3.0.0
 
+  '@ai-sdk/openai-compatible@0.0.8':
+    resolution: {integrity: sha512-gEyOSvAdhMRcSyfZeatrx1wv+ju+fS3zB8IbY8UJzs6WBg6YSu4ZqEJnY9UjuZ2TA0fmw4G7Mn3N4rJIrdiTOg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
+
   '@ai-sdk/openai@1.0.11':
     resolution: {integrity: sha512-qI9s7Slma5i5bB4yYVlFdcG3PNDwdqivPT1Dr8adDX92nSSpILjgFIooS5yys9sXjvvcfOi/WXbDvVhLSRRlvg==}
     engines: {node: '>=18'}
@@ -1432,6 +1444,15 @@ packages:
       zod:
         optional: true
 
+  '@ai-sdk/provider-utils@2.0.4':
+    resolution: {integrity: sha512-GMhcQCZbwM6RoZCri0MWeEWXRt/T+uCxsmHEsTwNvEH3GDjNzchfX25C8ftry2MeEOOn6KfqCLSKomcgK6RoOg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
+
   '@ai-sdk/provider-utils@2.0.5':
     resolution: {integrity: sha512-2M7vLhYN0ThGjNlzow7oO/lsL+DyMxvGMIYmVQvEYaCWhDzxH5dOp78VNjJIVwHzVLMbBDigX3rJuzAs853idw==}
     engines: {node: '>=18'}
@@ -1451,6 +1472,10 @@ packages:
 
   '@ai-sdk/provider@1.0.1':
     resolution: {integrity: sha512-mV+3iNDkzUsZ0pR2jG0sVzU6xtQY5DtSCBy3JFycLp6PwjyLw/iodfL3MwdmMCRJWgs3dadcHejRnMvF9nGTBg==}
+    engines: {node: '>=18'}
+
+  '@ai-sdk/provider@1.0.2':
+    resolution: {integrity: sha512-YYtP6xWQyaAf5LiWLJ+ycGTOeBLWrED7LUrvc+SQIWhGaneylqbaGsyQL7VouQUeQ4JZ1qKYZuhmi3W56HADPA==}
     engines: {node: '>=18'}
 
   '@ai-sdk/provider@1.0.3':
@@ -1546,6 +1571,12 @@ packages:
     peerDependenciesMeta:
       vue:
         optional: true
+
+  '@ai-sdk/xai@1.0.9':
+    resolution: {integrity: sha512-YjbHBW8t22R8ya8cEOqlkK2csSqNGTyZahV9AnKLA+squG/FMjzBPPW3OMLWedp4M3plF3uoLtvuzfkfrm2wQw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
 
   '@ai16z/eliza@0.1.5-alpha.5':
     resolution: {integrity: sha512-08EFPlfhE1p5IsacR0Kh2MZOBxKnOoWTE4vZ9cz3V9f/Ka0760p5sNzna4pfKlXUFBZlKfWDnbTXEDcjNOc20Q==}
@@ -11254,6 +11285,12 @@ snapshots:
       '@ai-sdk/provider-utils': 1.0.22(zod@3.23.8)
       zod: 3.23.8
 
+  '@ai-sdk/openai-compatible@0.0.8(zod@3.24.1)':
+    dependencies:
+      '@ai-sdk/provider': 1.0.2
+      '@ai-sdk/provider-utils': 2.0.4(zod@3.24.1)
+      zod: 3.24.1
+
   '@ai-sdk/openai@1.0.11(zod@3.23.8)':
     dependencies:
       '@ai-sdk/provider': 1.0.3
@@ -11314,6 +11351,15 @@ snapshots:
     optionalDependencies:
       zod: 3.24.1
 
+  '@ai-sdk/provider-utils@2.0.4(zod@3.24.1)':
+    dependencies:
+      '@ai-sdk/provider': 1.0.2
+      eventsource-parser: 3.0.0
+      nanoid: 3.3.8
+      secure-json-parse: 2.7.0
+    optionalDependencies:
+      zod: 3.24.1
+
   '@ai-sdk/provider-utils@2.0.5(zod@3.23.8)':
     dependencies:
       '@ai-sdk/provider': 1.0.3
@@ -11341,6 +11387,10 @@ snapshots:
       json-schema: 0.4.0
 
   '@ai-sdk/provider@1.0.1':
+    dependencies:
+      json-schema: 0.4.0
+
+  '@ai-sdk/provider@1.0.2':
     dependencies:
       json-schema: 0.4.0
 
@@ -11448,6 +11498,13 @@ snapshots:
       vue: 3.5.13(typescript@5.6.3)
     transitivePeerDependencies:
       - zod
+
+  '@ai-sdk/xai@1.0.9(zod@3.24.1)':
+    dependencies:
+      '@ai-sdk/openai-compatible': 0.0.8(zod@3.24.1)
+      '@ai-sdk/provider': 1.0.2
+      '@ai-sdk/provider-utils': 2.0.4(zod@3.24.1)
+      zod: 3.24.1
 
   '@ai16z/eliza@0.1.5-alpha.5(@google-cloud/vertexai@1.9.0(encoding@0.1.13))(@langchain/core@0.3.18(openai@4.73.0(encoding@0.1.13)(zod@3.23.8)))(axios@1.7.4)(encoding@0.1.13)(handlebars@4.7.8)(react@19.0.0-rc-66855b96-20241106)(sswr@2.1.0(svelte@5.2.12))(svelte@5.2.12)(vue@3.5.13(typescript@5.6.3))':
     dependencies:

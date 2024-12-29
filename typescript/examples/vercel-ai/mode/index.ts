@@ -11,7 +11,7 @@ import { mode } from "viem/chains";
 import { getOnChainTools } from "@goat-sdk/adapter-vercel-ai";
 import { MODE, USDC, erc20 } from "@goat-sdk/plugin-erc20";
 import { kim } from "@goat-sdk/plugin-kim";
-
+import { ironclad } from "@goat-sdk/plugin-ironclad";
 import { sendETH } from "@goat-sdk/wallet-evm";
 import { viem } from "@goat-sdk/wallet-viem";
 
@@ -30,7 +30,12 @@ const walletClient = createWalletClient({
 (async () => {
     const tools = await getOnChainTools({
         wallet: viem(walletClient),
-        plugins: [sendETH(), erc20({ tokens: [USDC, MODE] }), kim()],
+        plugins: [
+            sendETH(),
+            erc20({ tokens: [USDC, MODE] }),
+            kim(),
+            ironclad(),
+        ],
     });
 
     const rl = readline.createInterface({
@@ -59,7 +64,7 @@ const walletClient = createWalletClient({
             const result = await generateText({
                 model: openai("gpt-4o-mini"),
                 tools: tools,
-                maxSteps: 10,
+                maxSteps: 15,
                 prompt: prompt,
                 onStepFinish: (event) => {
                     console.log(event.toolResults);

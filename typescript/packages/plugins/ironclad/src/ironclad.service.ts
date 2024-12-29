@@ -18,6 +18,9 @@ import {
 } from "./parameters";
 import { CalculateMaxWithdrawableParameters } from "./parameters";
 import { getVaultAddress } from "./vaultAddresses";
+import { DepositToVaultParameters, OpenTroveParameters } from "./parameters";
+import { GetIcVaultParameters } from "./parameters";
+import { GetBorrowerAddressParameters } from "./parameters";
 
 interface LoopPosition {
     borrowedAmounts: string[];
@@ -377,104 +380,104 @@ export class IroncladService {
         }
     }
 
-    @Tool({
-        name: "borrow_iusd_ironclad",
-        description: "Deposit collateral and borrow iUSD against it",
-    })
-    async borrowIUSD(
-        walletClient: EVMWalletClient,
-        parameters: BorrowIUSDParameters
-    ): Promise<string> {
-        try {
-            const vaultAddress = getVaultAddress(parameters.tokenAddress);
+    // @Tool({
+    //     name: "borrow_iusd_ironclad",
+    //     description: "Deposit collateral and borrow iUSD against it",
+    // })
+    // async borrowIUSD(
+    //     walletClient: EVMWalletClient,
+    //     parameters: BorrowIUSDParameters
+    // ): Promise<string> {
+    //     try {
+    //         const vaultAddress = getVaultAddress(parameters.tokenAddress);
 
-            // Check USDC allowance for vault
-            const usdcAllowanceResult = await walletClient.read({
-                address: parameters.tokenAddress,
-                abi: ERC20_ABI,
-                functionName: "allowance",
-                args: [walletClient.getAddress(), vaultAddress],
-            });
-            const usdcAllowance = (usdcAllowanceResult as { value: bigint })
-                .value;
+    //         // Check USDC allowance for vault
+    //         const usdcAllowanceResult = await walletClient.read({
+    //             address: parameters.tokenAddress,
+    //             abi: ERC20_ABI,
+    //             functionName: "allowance",
+    //             args: [walletClient.getAddress(), vaultAddress],
+    //         });
+    //         const usdcAllowance = (usdcAllowanceResult as { value: bigint })
+    //             .value;
 
-            // Approve USDC if needed
-            if (Number(usdcAllowance) < Number(parameters.tokenAmount)) {
-                await walletClient.sendTransaction({
-                    to: parameters.tokenAddress,
-                    abi: ERC20_ABI,
-                    functionName: "approve",
-                    args: [vaultAddress, parameters.tokenAmount],
-                });
-            }
+    //         // Approve USDC if needed
+    //         if (Number(usdcAllowance) < Number(parameters.tokenAmount)) {
+    //             await walletClient.sendTransaction({
+    //                 to: parameters.tokenAddress,
+    //                 abi: ERC20_ABI,
+    //                 functionName: "approve",
+    //                 args: [vaultAddress, parameters.tokenAmount],
+    //             });
+    //         }
 
-            // Deposit USDC into vault
-            await walletClient.sendTransaction({
-                to: vaultAddress,
-                abi: IC_VAULT_ABI,
-                functionName: "deposit",
-                args: [parameters.tokenAmount, walletClient.getAddress()],
-            });
+    //         // Deposit USDC into vault
+    //         await walletClient.sendTransaction({
+    //             to: vaultAddress,
+    //             abi: IC_VAULT_ABI,
+    //             functionName: "deposit",
+    //             args: [parameters.tokenAmount, walletClient.getAddress()],
+    //         });
 
-            // Step 2: Open Trove with ic-USDC
+    //         // Step 2: Open Trove with ic-USDC
 
-            // Check ic-USDC allowance for borrower
-            const icUSDCAllowanceResult = await walletClient.read({
-                address: vaultAddress,
-                abi: ERC20_ABI,
-                functionName: "allowance",
-                args: [walletClient.getAddress(), BORROWER_ADDRESS],
-            });
-            const icUSDCAllowance = (icUSDCAllowanceResult as { value: bigint })
-                .value;
+    //         // Check ic-USDC allowance for borrower
+    //         const icUSDCAllowanceResult = await walletClient.read({
+    //             address: vaultAddress,
+    //             abi: ERC20_ABI,
+    //             functionName: "allowance",
+    //             args: [walletClient.getAddress(), BORROWER_ADDRESS],
+    //         });
+    //         const icUSDCAllowance = (icUSDCAllowanceResult as { value: bigint })
+    //             .value;
 
-            // Approve ic-USDC if needed
-            if (Number(icUSDCAllowance) < Number(parameters.tokenAmount)) {
-                await walletClient.sendTransaction({
-                    to: vaultAddress,
-                    abi: ERC20_ABI,
-                    functionName: "approve",
-                    args: [BORROWER_ADDRESS, parameters.tokenAmount],
-                });
-            }
+    //         // Approve ic-USDC if needed
+    //         if (Number(icUSDCAllowance) < Number(parameters.tokenAmount)) {
+    //             await walletClient.sendTransaction({
+    //                 to: vaultAddress,
+    //                 abi: ERC20_ABI,
+    //                 functionName: "approve",
+    //                 args: [BORROWER_ADDRESS, parameters.tokenAmount],
+    //             });
+    //         }
 
-            // Calculate hints first
-            const { upperHint, lowerHint } = await this.getHints(
-                walletClient,
-                vaultAddress,
-                BigInt(parameters.tokenAmount),
-                BigInt(parameters.iUSDAmount)
-            );
-            // Prepare openTrove parameters
-            const openTroveParams = {
-                _collateral: vaultAddress,
-                _collateralAmount: parameters.tokenAmount,
-                _maxFeePercentage: BigInt("5000000000000000"),
-                _iUSDAmount: BigInt(parameters.iUSDAmount),
-                _upperHint: upperHint as `0x${string}`,
-                _lowerHint: lowerHint as `0x${string}`,
-            };
+    //         // Calculate hints first
+    //         const { upperHint, lowerHint } = await this.getHints(
+    //             walletClient,
+    //             vaultAddress,
+    //             BigInt(parameters.tokenAmount),
+    //             BigInt(parameters.iUSDAmount)
+    //         );
+    //         // Prepare openTrove parameters
+    //         const openTroveParams = {
+    //             _collateral: vaultAddress,
+    //             _collateralAmount: parameters.tokenAmount,
+    //             _maxFeePercentage: BigInt("5000000000000000"),
+    //             _iUSDAmount: BigInt(parameters.iUSDAmount),
+    //             _upperHint: upperHint as `0x${string}`,
+    //             _lowerHint: lowerHint as `0x${string}`,
+    //         };
 
-            // Execute openTrove transaction
-            const txHash = await walletClient.sendTransaction({
-                to: BORROWER_ADDRESS as `0x${string}`,
-                abi: BORROWER_ABI,
-                functionName: "openTrove",
-                args: [
-                    openTroveParams._collateral,
-                    openTroveParams._collateralAmount,
-                    openTroveParams._maxFeePercentage,
-                    openTroveParams._iUSDAmount,
-                    openTroveParams._upperHint,
-                    openTroveParams._lowerHint,
-                ],
-            });
+    //         // Execute openTrove transaction
+    //         const txHash = await walletClient.sendTransaction({
+    //             to: BORROWER_ADDRESS as `0x${string}`,
+    //             abi: BORROWER_ABI,
+    //             functionName: "openTrove",
+    //             args: [
+    //                 openTroveParams._collateral,
+    //                 openTroveParams._collateralAmount,
+    //                 openTroveParams._maxFeePercentage,
+    //                 openTroveParams._iUSDAmount,
+    //                 openTroveParams._upperHint,
+    //                 openTroveParams._lowerHint,
+    //             ],
+    //         });
 
-            return `Successfully deposited ${parameters.tokenAmount} USDC into ic-USDC vault and borrowed ${parameters.iUSDAmount} iUSD. Transaction: ${txHash.hash}`;
-        } catch (error) {
-            throw Error(`Failed to borrow iUSD: ${error}`);
-        }
-    }
+    //         return `Successfully deposited ${parameters.tokenAmount} USDC into ic-USDC vault and borrowed ${parameters.iUSDAmount} iUSD. Transaction: ${txHash.hash}`;
+    //     } catch (error) {
+    //         throw Error(`Failed to borrow iUSD: ${error}`);
+    //     }
+    // }
 
     @Tool({
         name: "repay_iusd_ironclad",
@@ -567,16 +570,6 @@ export class IroncladService {
     }> {
         try {
             const vaultAddress = getVaultAddress(parameters.tokenAddress);
-
-            // Get token decimals
-            const decimals = Number(
-                await walletClient.read({
-                    address: parameters.tokenAddress as `0x${string}`,
-                    abi: ERC20_ABI,
-                    functionName: "decimals",
-                })
-            );
-
             // Get Trove status
             const statusResult = await walletClient.read({
                 address: TROVE_MANAGER_ADDRESS as `0x${string}`,
@@ -731,5 +724,150 @@ export class IroncladService {
             upperHint: hintAddress,
             lowerHint: "0x0000000000000000000000000000000000000000", // zero address
         };
+    }
+
+    @Tool({
+        name: "deposit_to_vault_ironclad",
+        description:
+            "Deposit a token into its corresponding Ironclad vault to receive ic-tokens",
+    })
+    async depositToVault(
+        walletClient: EVMWalletClient,
+        parameters: DepositToVaultParameters
+    ): Promise<string> {
+        try {
+            console.log(`[Ironclad] ====== Starting Vault Deposit ======`);
+            const vaultAddress = getVaultAddress(parameters.tokenAddress);
+
+            // Check token allowance for vault
+            const allowanceResult = await walletClient.read({
+                address: parameters.tokenAddress as `0x${string}`,
+                abi: ERC20_ABI,
+                functionName: "allowance",
+                args: [walletClient.getAddress(), vaultAddress],
+            });
+            const allowance = (allowanceResult as { value: bigint }).value;
+
+            // Approve token if needed
+            if (Number(allowance) < Number(parameters.tokenAmount)) {
+                console.log(`[Ironclad] Approving tokens for vault...`);
+                await walletClient.sendTransaction({
+                    to: parameters.tokenAddress,
+                    abi: ERC20_ABI,
+                    functionName: "approve",
+                    args: [vaultAddress, parameters.tokenAmount],
+                });
+            }
+
+            // Deposit token into vault
+            console.log(`[Ironclad] Depositing tokens into vault...`);
+            const txHash = await walletClient.sendTransaction({
+                to: vaultAddress,
+                abi: IC_VAULT_ABI,
+                functionName: "deposit",
+                args: [parameters.tokenAmount, walletClient.getAddress()],
+            });
+
+            console.log(`[Ironclad] ✅ Deposit successful: ${txHash.hash}`);
+            return `Successfully deposited ${parameters.tokenAmount} tokens into vault. Transaction: ${txHash.hash}`;
+        } catch (error) {
+            console.error(`[Ironclad] ❌ Error in deposit:`, error);
+            throw Error(`Failed to deposit to vault: ${error}`);
+        }
+    }
+
+    @Tool({
+        name: "open_trove_ironclad",
+        description:
+            "Open a Trove using ic-tokens as collateral to borrow iUSD",
+    })
+    async openTrove(
+        walletClient: EVMWalletClient,
+        parameters: OpenTroveParameters
+    ): Promise<string> {
+        try {
+            console.log(`[Ironclad] ====== Starting Trove Opening ======`);
+
+            // Calculate hints
+            console.log(`[Ironclad] Calculating position hints...`);
+            const { upperHint, lowerHint } = await this.getHints(
+                walletClient,
+                parameters.vaultAddress,
+                BigInt(parameters.collateralAmount),
+                BigInt(parameters.iUSDAmount)
+            );
+
+            // Execute openTrove transaction
+            console.log(`[Ironclad] Opening Trove...`);
+            const txHash = await walletClient.sendTransaction({
+                to: BORROWER_ADDRESS as `0x${string}`,
+                abi: BORROWER_ABI,
+                functionName: "openTrove",
+                args: [
+                    parameters.vaultAddress,
+                    parameters.collateralAmount,
+                    BigInt(parameters.maxFeePercentage),
+                    BigInt(parameters.iUSDAmount),
+                    upperHint as `0x${string}`,
+                    lowerHint as `0x${string}`,
+                ],
+            });
+
+            console.log(
+                `[Ironclad] ✅ Trove opened successfully: ${txHash.hash}`
+            );
+            return `Successfully opened Trove with ${parameters.collateralAmount} ic-tokens as collateral and borrowed ${parameters.iUSDAmount} iUSD. Transaction: ${txHash.hash}`;
+        } catch (error) {
+            console.error(`[Ironclad] ❌ Error opening Trove:`, error);
+            throw Error(`Failed to open Trove: ${error}`);
+        }
+    }
+
+    @Tool({
+        name: "get_ic_vault_ironclad",
+        description:
+            "Get the corresponding ic-vault address for a token. Use this before approving tokens for deposit.",
+    })
+    async getIcVault(
+        walletClient: EVMWalletClient,
+        parameters: GetIcVaultParameters
+    ): Promise<string> {
+        try {
+            console.log(`[Ironclad] ====== Getting ic-vault Address ======`);
+            console.log(`[Ironclad] Token Address: ${parameters.tokenAddress}`);
+
+            const vaultAddress = getVaultAddress(parameters.tokenAddress);
+            console.log(`[Ironclad] ✅ Found ic-vault: ${vaultAddress}`);
+
+            return vaultAddress;
+        } catch (error) {
+            console.error(`[Ironclad] ❌ Error getting ic-vault:`, error);
+            throw Error(`Failed to get ic-vault address: ${error}`);
+        }
+    }
+
+    @Tool({
+        name: "get_borrower_address_ironclad",
+        description:
+            "Get the Borrower contract address. Use this before approving ic-tokens to deposit into Borrow contract to get iUSD.",
+    })
+    async getBorrowerAddress(
+        walletClient: EVMWalletClient,
+        parameters: GetBorrowerAddressParameters
+    ): Promise<string> {
+        try {
+            console.log(
+                `[Ironclad] ====== Getting Borrower Contract Address ======`
+            );
+            console.log(`[Ironclad] ✅ Borrower Address: ${BORROWER_ADDRESS}`);
+
+            return BORROWER_ADDRESS;
+        } catch (error) {
+            console.error(
+                `[Ironclad] ❌ Error getting borrower address:`,
+                error
+            );
+            throw Error(`Failed to get borrower address: ${error}`);
+        }
     }
 }
