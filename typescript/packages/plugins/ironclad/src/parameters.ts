@@ -15,7 +15,8 @@ export class LoopDepositParameters extends createToolParameters(
             .number()
             .min(1)
             .max(5)
-            .describe("Number of loops to perform"),
+            .default(2)
+            .describe("Number of loops to perform, a number between 1 and 5"),
         referralCode: z
             .string()
             .optional()
@@ -81,32 +82,6 @@ export class CalculateMaxWithdrawableParameters extends createToolParameters(
     })
 ) {}
 
-export class DepositToVaultParameters extends createToolParameters(
-    z.object({
-        tokenAddress: z
-            .string()
-            .describe("The address of the token to deposit"),
-        tokenAmount: z
-            .string()
-            .describe("Amount of token to deposit in base units"),
-    })
-) {}
-
-export class OpenTroveParameters extends createToolParameters(
-    z.object({
-        vaultAddress: z.string().describe("The address of the ic-token vault"),
-        collateralAmount: z
-            .string()
-            .describe("Amount of ic-token to use as collateral"),
-        maxFeePercentage: z
-            .string()
-            .optional()
-            .default("5000000000000000")
-            .describe("Maximum fee percentage for the borrowing operation"),
-        iUSDAmount: z.string().describe("Amount of iUSD to borrow"),
-    })
-) {}
-
 export class GetIcVaultParameters extends createToolParameters(
     z.object({
         tokenAddress: z
@@ -122,4 +97,8 @@ export class GetBorrowerAddressParameters extends createToolParameters(
         // Empty object as we don't need any parameters,
         // the borrower address is constant for all operations
     })
+) {}
+
+export class GetLendingPoolAddressParameters extends createToolParameters(
+    z.object({})
 ) {}
