@@ -554,8 +554,7 @@ export const BORROWER_ABI = [
                         type: "address",
                     },
                 ],
-                internalType:
-                    "struct IBorrowerOperations.Params_adjustTroveFor",
+                internalType: "struct IBorrowerOperations.Params_adjustTroveFor",
                 name: "params",
                 type: "tuple",
             },

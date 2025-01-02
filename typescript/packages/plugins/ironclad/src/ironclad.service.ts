@@ -1,25 +1,23 @@
 import { Tool } from "@goat-sdk/core";
 import { EVMWalletClient } from "@goat-sdk/wallet-evm";
-import { formatUnits, parseUnits } from "viem";
-import type { Address } from "viem";
-import { z } from "zod";
-import { ERC20_ABI } from "./abi/erc20";
-import { LENDING_POOL_ABI } from "./abi/lendingPool";
+import { formatUnits } from "viem";
 import { BORROWER_ABI } from "./abi/borrower";
-import { PROTOCOL_DATA_PROVIDER_ABI } from "./abi/protocolDataProvider";
-import { TROVE_MANAGER_ABI } from "./abi/troveManager";
+import { ERC20_ABI } from "./abi/erc20";
 import { HINT_HELPERS_ABI } from "./abi/hinthelper";
 import { IC_VAULT_ABI } from "./abi/icVault";
+import { LENDING_POOL_ABI } from "./abi/lendingPool";
+import { PROTOCOL_DATA_PROVIDER_ABI } from "./abi/protocolDataProvider";
+import { TROVE_MANAGER_ABI } from "./abi/troveManager";
 import {
+    BorrowIUSDParameters,
+    CalculateMaxWithdrawableParameters,
+    GetBorrowerAddressParameters,
+    GetIcVaultParameters,
+    GetLendingPoolAddressParameters,
     LoopDepositParameters,
     LoopWithdrawParameters,
-    GetIcVaultParameters,
-    GetBorrowerAddressParameters,
-    GetLendingPoolAddressParameters,
-    CalculateMaxWithdrawableParameters,
-    BorrowIUSDParameters,
-    RepayIUSDParameters,
     MonitorPositionParameters,
+    RepayIUSDParameters,
 } from "./parameters";
 import { getVaultAddress } from "./vaultAddresses";
 
@@ -30,24 +28,18 @@ interface LoopPosition {
 }
 
 const LENDING_POOL_ADDRESS = "0xB702cE183b4E1Faa574834715E5D4a6378D0eEd3";
-const PROTOCOL_DATA_PROVIDER_ADDRESS =
-    "0x29563f73De731Ae555093deb795ba4D1E584e42E";
+const PROTOCOL_DATA_PROVIDER_ADDRESS = "0x29563f73De731Ae555093deb795ba4D1E584e42E";
 const IUSD_ADDRESS = "0xA70266C8F8Cf33647dcFEE763961aFf418D9E1E4";
 const BORROWER_ADDRESS = "0x9571873B4Df31D317d4ED4FE4689915A2F3fF7d4";
 const TROVE_MANAGER_ADDRESS = "0x829746b34F624fdB03171AA4cF4D2675B0F2A2e6";
 const HINT_HELPERS_ADDRESS = "0xBdAA7033f0A109A9777ee42a82799642a877Fc4b";
 export class IroncladService {
-    constructor() {}
-
     @Tool({
         name: "loop_deposit_ironclad",
         description:
             "Perform a looped deposit (recursive borrowing) on Ironclad. Send the amount of the asset (in base units) you want to deposit as the initial amount.",
     })
-    async loopDeposit(
-        walletClient: EVMWalletClient,
-        parameters: LoopDepositParameters
-    ): Promise<LoopPosition> {
+    async loopDeposit(walletClient: EVMWalletClient, parameters: LoopDepositParameters): Promise<LoopPosition> {
         try {
             const position: LoopPosition = {
                 borrowedAmounts: [],
@@ -62,12 +54,7 @@ export class IroncladService {
                 to: LENDING_POOL_ADDRESS,
                 abi: LENDING_POOL_ABI,
                 functionName: "deposit",
-                args: [
-                    asset,
-                    parameters.initialAmount,
-                    walletClient.getAddress(),
-                    parameters.referralCode,
-                ],
+                args: [asset, parameters.initialAmount, walletClient.getAddress(), parameters.referralCode],
             });
 
             position.totalDeposited = parameters.initialAmount;
@@ -75,32 +62,17 @@ export class IroncladService {
 
             // Execute loops
             for (let i = 0; i < parameters.numLoops; i++) {
-                // Get reserve configuration
-                const userReserveDataResult = await walletClient.read({
-                    address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
-                    abi: PROTOCOL_DATA_PROVIDER_ABI,
-                    functionName: "getUserReserveData",
-                    args: [asset, walletClient.getAddress()],
-                });
-                const userReserveData = (
-                    userReserveDataResult as { value: any[] }
-                ).value;
-
                 const reserveConfigResult = await walletClient.read({
                     address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
                     abi: PROTOCOL_DATA_PROVIDER_ABI,
                     functionName: "getReserveConfigurationData",
                     args: [asset],
                 });
-                const reserveConfig = (reserveConfigResult as { value: any[] })
-                    .value;
+                const reserveConfig = reserveConfigResult.value as [bigint, bigint, bigint];
 
                 const ltv = Number(reserveConfig[1]);
 
-                const borrowAmount = (
-                    (Number(currentAmount) * ltv) /
-                    10000
-                ).toString();
+                const borrowAmount = ((Number(currentAmount) * ltv) / 10000).toString();
 
                 // Borrow
                 await walletClient.sendTransaction({
@@ -122,8 +94,7 @@ export class IroncladService {
                     functionName: "allowance",
                     args: [walletClient.getAddress(), LENDING_POOL_ADDRESS],
                 });
-                const loopAllowance = (loopAllowanceResult as { value: bigint })
-                    .value;
+                const loopAllowance = (loopAllowanceResult as { value: bigint }).value;
 
                 if (Number(loopAllowance) < Number(borrowAmount)) {
                     await walletClient.sendTransaction({
@@ -139,22 +110,13 @@ export class IroncladService {
                     to: LENDING_POOL_ADDRESS,
                     abi: LENDING_POOL_ABI,
                     functionName: "deposit",
-                    args: [
-                        asset,
-                        borrowAmount,
-                        walletClient.getAddress(),
-                        parameters.referralCode,
-                    ],
+                    args: [asset, borrowAmount, walletClient.getAddress(), parameters.referralCode],
                 });
 
                 // Update position tracking
                 position.borrowedAmounts.push(borrowAmount);
-                position.totalBorrowed = (
-                    Number(position.totalBorrowed) + Number(borrowAmount)
-                ).toString();
-                position.totalDeposited = (
-                    Number(position.totalDeposited) + Number(borrowAmount)
-                ).toString();
+                position.totalBorrowed = (Number(position.totalBorrowed) + Number(borrowAmount)).toString();
+                position.totalDeposited = (Number(position.totalDeposited) + Number(borrowAmount)).toString();
                 currentAmount = borrowAmount;
             }
             return position;
@@ -167,10 +129,7 @@ export class IroncladService {
         name: "loop_withdraw_ironclad",
         description: "Withdraw a looped position on Ironclad",
     })
-    async loopWithdraw(
-        walletClient: EVMWalletClient,
-        parameters: LoopWithdrawParameters
-    ): Promise<string> {
+    async loopWithdraw(walletClient: EVMWalletClient, parameters: LoopWithdrawParameters): Promise<string> {
         try {
             const userReserveDataResult = await walletClient.read({
                 address: PROTOCOL_DATA_PROVIDER_ADDRESS as `0x${string}`,
@@ -179,39 +138,28 @@ export class IroncladService {
                 args: [parameters.assetAddress, walletClient.getAddress()],
             });
 
-            const userReserveData = (userReserveDataResult as { value: any[] })
-                .value;
+            const userReserveData = userReserveDataResult.value as [bigint, bigint, bigint];
             let remainingDebt = userReserveData[2]; // currentVariableDebt
 
             let withdrawalCount = 1;
             while (remainingDebt > 0n) {
-                const maxWithdrawable =
-                    await this.calculateMaxWithdrawableAmount(walletClient, {
-                        assetAddress: parameters.assetAddress,
-                    });
+                const maxWithdrawable = await this.calculateMaxWithdrawableAmount(walletClient, {
+                    assetAddress: parameters.assetAddress,
+                });
 
                 if (maxWithdrawable === 0n) {
-                    throw new Error(
-                        "Cannot withdraw any more funds while maintaining health factor"
-                    );
+                    throw new Error("Cannot withdraw any more funds while maintaining health factor");
                 }
 
                 // If this is the last withdrawal (no remaining debt), withdraw everything
                 // Otherwise, use 99.5% of max withdrawable to account for any small changes
-                const withdrawAmount =
-                    remainingDebt === 0n
-                        ? maxWithdrawable
-                        : (maxWithdrawable * 995n) / 1000n;
+                const withdrawAmount = remainingDebt === 0n ? maxWithdrawable : (maxWithdrawable * 995n) / 1000n;
                 // Withdraw the calculated amount
                 await walletClient.sendTransaction({
                     to: LENDING_POOL_ADDRESS,
                     abi: LENDING_POOL_ABI,
                     functionName: "withdraw",
-                    args: [
-                        parameters.assetAddress,
-                        withdrawAmount,
-                        walletClient.getAddress(),
-                    ],
+                    args: [parameters.assetAddress, withdrawAmount, walletClient.getAddress()],
                 });
                 const allowanceResult = await walletClient.read({
                     address: parameters.assetAddress as `0x${string}`,
@@ -235,12 +183,7 @@ export class IroncladService {
                     to: LENDING_POOL_ADDRESS,
                     abi: LENDING_POOL_ABI,
                     functionName: "repay",
-                    args: [
-                        parameters.assetAddress,
-                        withdrawAmount,
-                        2,
-                        walletClient.getAddress(),
-                    ],
+                    args: [parameters.assetAddress, withdrawAmount, 2, walletClient.getAddress()],
                 });
 
                 // After repayment, get updated debt from protocol
@@ -250,8 +193,9 @@ export class IroncladService {
                     functionName: "getUserReserveData",
                     args: [parameters.assetAddress, walletClient.getAddress()],
                 });
-                remainingDebt = (updatedReserveData as { value: any[] })
-                    .value[2];
+
+                // biome-ignore lint/suspicious/noExplicitAny: need to fix this
+                remainingDebt = (updatedReserveData.value as any)[2];
                 withdrawalCount++;
             }
 
@@ -262,8 +206,8 @@ export class IroncladService {
                 functionName: "getUserReserveData",
                 args: [parameters.assetAddress, walletClient.getAddress()],
             });
-            const remainingDeposit = (finalReserveData as { value: any[] })
-                .value[0]; // aToken balance
+            // biome-ignore lint/suspicious/noExplicitAny: need to fix this
+            const remainingDeposit = (finalReserveData.value as any)[0]; // aToken balance
 
             if (remainingDeposit > 0n) {
                 // Withdraw all remaining deposits
@@ -271,16 +215,10 @@ export class IroncladService {
                     to: LENDING_POOL_ADDRESS,
                     abi: LENDING_POOL_ABI,
                     functionName: "withdraw",
-                    args: [
-                        parameters.assetAddress,
-                        remainingDeposit,
-                        walletClient.getAddress(),
-                    ],
+                    args: [parameters.assetAddress, remainingDeposit, walletClient.getAddress()],
                 });
             }
-            return `Successfully unwound position in ${
-                withdrawalCount - 1
-            } loops`;
+            return `Successfully unwound position in ${withdrawalCount - 1} loops`;
         } catch (error) {
             throw Error(`Failed to execute loop withdraw: ${error}`);
         }
@@ -292,7 +230,7 @@ export class IroncladService {
     })
     async monitorLoopPosition(
         walletClient: EVMWalletClient,
-        parameters: MonitorPositionParameters
+        parameters: MonitorPositionParameters,
     ): Promise<{
         totalCollateral: string;
         totalBorrowed: string;
@@ -317,8 +255,8 @@ export class IroncladService {
                 functionName: "getUserReserveData",
                 args: [asset, walletClient.getAddress()],
             });
-            const userReserveData = (userReserveDataResult as { value: any[] })
-                .value;
+            // biome-ignore lint/suspicious/noExplicitAny: need to fix this
+            const userReserveData = (userReserveDataResult.value as any)[0];
 
             // Get reserve configuration
             const reserveConfigResult = await walletClient.read({
@@ -327,8 +265,8 @@ export class IroncladService {
                 functionName: "getReserveConfigurationData",
                 args: [asset],
             });
-            const reserveConfig = (reserveConfigResult as { value: any[] })
-                .value;
+            // biome-ignore lint/suspicious/noExplicitAny: need to fix this
+            const reserveConfig = (reserveConfigResult.value as any)[0];
 
             const totalCollateral = formatUnits(userReserveData[0], decimals);
             const totalBorrowed = formatUnits(userReserveData[2], decimals);
@@ -336,29 +274,19 @@ export class IroncladService {
 
             // Calculate current LTV and health factor
             const currentLTV =
-                totalBorrowed === "0"
-                    ? "0"
-                    : (
-                          (Number(totalBorrowed) / Number(totalCollateral)) *
-                          100
-                      ).toFixed(2);
+                totalBorrowed === "0" ? "0" : ((Number(totalBorrowed) / Number(totalCollateral)) * 100).toFixed(2);
 
             const healthFactor =
                 totalBorrowed === "0"
                     ? "∞"
-                    : (
-                          (Number(totalCollateral) * liquidationThreshold) /
-                          Number(totalBorrowed)
-                      ).toFixed(2);
+                    : ((Number(totalCollateral) * liquidationThreshold) / Number(totalBorrowed)).toFixed(2);
 
             return {
                 totalCollateral,
                 totalBorrowed,
                 currentLTV: `${currentLTV}%`,
                 healthFactor,
-                liquidationThreshold: `${(liquidationThreshold * 100).toFixed(
-                    2
-                )}%`,
+                liquidationThreshold: `${(liquidationThreshold * 100).toFixed(2)}%`,
             };
         } catch (error) {
             throw Error(`Failed to monitor loop position: ${error}`);
@@ -369,10 +297,7 @@ export class IroncladService {
         name: "borrow_iusd_ironclad",
         description: "Deposit collateral and borrow iUSD against it",
     })
-    async borrowIUSD(
-        walletClient: EVMWalletClient,
-        parameters: BorrowIUSDParameters
-    ): Promise<string> {
+    async borrowIUSD(walletClient: EVMWalletClient, parameters: BorrowIUSDParameters): Promise<string> {
         try {
             const vaultAddress = getVaultAddress(parameters.tokenAddress);
 
@@ -397,7 +322,7 @@ export class IroncladService {
                 walletClient,
                 vaultAddress,
                 BigInt(parameters.tokenAmount),
-                BigInt(parameters.iUSDAmount)
+                BigInt(parameters.iUSDAmount),
             );
             // Prepare openTrove parameters
             const openTroveParams = {
@@ -434,10 +359,7 @@ export class IroncladService {
         name: "repay_iusd_ironclad",
         description: "Repay all iUSD and close the Trove position",
     })
-    async repayIUSD(
-        walletClient: EVMWalletClient,
-        parameters: RepayIUSDParameters
-    ): Promise<string> {
+    async repayIUSD(walletClient: EVMWalletClient, parameters: RepayIUSDParameters): Promise<string> {
         try {
             const vaultAddress = getVaultAddress(parameters.tokenAddress);
 
@@ -487,9 +409,7 @@ export class IroncladService {
                 functionName: "balanceOf",
                 args: [walletClient.getAddress()],
             });
-            const collateralBalance = (
-                collateralBalanceResult as { value: bigint }
-            ).value;
+            const collateralBalance = (collateralBalanceResult as { value: bigint }).value;
 
             if (collateralBalance > 0n) {
                 // Withdraw all collateral
@@ -513,7 +433,7 @@ export class IroncladService {
     })
     async monitorPosition(
         walletClient: EVMWalletClient,
-        parameters: MonitorPositionParameters
+        parameters: MonitorPositionParameters,
     ): Promise<{
         currentCollateral: string;
         currentDebt: string;
@@ -560,8 +480,7 @@ export class IroncladService {
             return {
                 currentCollateral: collateral.toString(),
                 currentDebt: formatUnits(debt, 18),
-                troveStatus:
-                    statusMap[status as keyof typeof statusMap] || "unknown",
+                troveStatus: statusMap[status as keyof typeof statusMap] || "unknown",
             };
         } catch (error) {
             throw Error(`Failed to monitor position: ${error}`);
@@ -570,12 +489,11 @@ export class IroncladService {
 
     @Tool({
         name: "calculate_max_withdrawable_ironclad",
-        description:
-            "Calculate maximum withdrawable amount while maintaining health factor",
+        description: "Calculate maximum withdrawable amount while maintaining health factor",
     })
     async calculateMaxWithdrawableAmount(
         walletClient: EVMWalletClient,
-        parameters: CalculateMaxWithdrawableParameters
+        parameters: CalculateMaxWithdrawableParameters,
     ): Promise<bigint> {
         const asset = parameters.assetAddress;
         // Get user's reserve data
@@ -585,8 +503,8 @@ export class IroncladService {
             functionName: "getUserReserveData",
             args: [asset, walletClient.getAddress()],
         });
-        const userReserveData = (userReserveDataResult as { value: any[] })
-            .value;
+        // biome-ignore lint/suspicious/noExplicitAny: need to fix this
+        const userReserveData = (userReserveDataResult.value as any)[0];
 
         // Get reserve configuration
         const reserveConfigResult = await walletClient.read({
@@ -595,15 +513,14 @@ export class IroncladService {
             functionName: "getReserveConfigurationData",
             args: [asset],
         });
-        const reserveConfig = (reserveConfigResult as { value: any[] }).value;
+        // biome-ignore lint/suspicious/noExplicitAny: need to fix this
+        const reserveConfig = (reserveConfigResult.value as any)[0];
 
         const currentATokenBalance = userReserveData[0]; // Current collateral
         const currentVariableDebt = userReserveData[2]; // Current debt
         const liquidationThreshold = reserveConfig[2]; // In basis points (e.g., 8500 = 85%)
 
-        let remainingDebt: bigint;
-        // Update remaining debt from protocol data
-        remainingDebt = currentVariableDebt;
+        const remainingDebt = currentVariableDebt;
 
         if (remainingDebt === 0n) {
             return currentATokenBalance; // Can withdraw everything if no debt
@@ -614,8 +531,7 @@ export class IroncladService {
         // So: collateral >= debt / (liquidationThreshold)
         // Therefore, maximum withdrawable = currentCollateral - (debt / liquidationThreshold)
 
-        const minRequiredCollateral =
-            (currentVariableDebt * 10000n) / liquidationThreshold;
+        const minRequiredCollateral = (currentVariableDebt * 10000n) / liquidationThreshold;
 
         if (currentATokenBalance <= minRequiredCollateral) {
             return 0n; // Cannot withdraw anything
@@ -628,7 +544,7 @@ export class IroncladService {
         walletClient: EVMWalletClient,
         collateral: string,
         collateralAmount: bigint,
-        debt: bigint
+        debt: bigint,
     ): Promise<{ upperHint: string; lowerHint: string }> {
         const decimals = (
             await walletClient.read({
@@ -667,9 +583,7 @@ export class IroncladService {
         });
 
         // The function returns (address hintAddress, uint diff, uint latestRandomSeed)
-        const [hintAddress] = (
-            result as { value: [`0x${string}`, bigint, bigint] }
-        ).value;
+        const [hintAddress] = (result as { value: [`0x${string}`, bigint, bigint] }).value;
 
         return {
             upperHint: hintAddress,
@@ -682,10 +596,7 @@ export class IroncladService {
         description:
             "Get the corresponding ic-vault address for a token. Use this before approving tokens for deposit.",
     })
-    async getIcVault(
-        walletClient: EVMWalletClient,
-        parameters: GetIcVaultParameters
-    ): Promise<string> {
+    async getIcVault(walletClient: EVMWalletClient, parameters: GetIcVaultParameters): Promise<string> {
         try {
             const vaultAddress = getVaultAddress(parameters.tokenAddress);
 
@@ -700,10 +611,7 @@ export class IroncladService {
         description:
             "Get the Borrower contract address. Use this before approving ic-tokens to deposit into Borrow contract to get iUSD.",
     })
-    async getBorrowerAddress(
-        walletClient: EVMWalletClient,
-        parameters: GetBorrowerAddressParameters
-    ): Promise<string> {
+    async getBorrowerAddress(walletClient: EVMWalletClient, parameters: GetBorrowerAddressParameters): Promise<string> {
         try {
             return BORROWER_ADDRESS;
         } catch (error) {
@@ -713,27 +621,15 @@ export class IroncladService {
 
     @Tool({
         name: "get_lending_pool_address_ironclad",
-        description:
-            "Get the Lending Pool contract address. Use this address to approve tokens for looped deposit.",
+        description: "Get the Lending Pool contract address. Use this address to approve tokens for looped deposit.",
     })
     async getLendingPoolAddress(
         walletClient: EVMWalletClient,
-        parameters: GetLendingPoolAddressParameters
+        parameters: GetLendingPoolAddressParameters,
     ): Promise<string> {
         try {
-            console.log(
-                `[Ironclad] ====== Getting Lending Pool Contract Address ======`
-            );
-            console.log(
-                `[Ironclad] ✅ Lending Pool Address: ${LENDING_POOL_ADDRESS}`
-            );
-
             return LENDING_POOL_ADDRESS;
         } catch (error) {
-            console.error(
-                `[Ironclad] ❌ Error getting lending pool address:`,
-                error
-            );
             throw Error(`Failed to get lending pool address: ${error}`);
         }
     }

@@ -629,8 +629,7 @@ export const LENDING_POOL_ABI = [
                                 type: "uint256",
                             },
                         ],
-                        internalType:
-                            "struct DataTypes.ReserveConfigurationMap",
+                        internalType: "struct DataTypes.ReserveConfigurationMap",
                         name: "configuration",
                         type: "tuple",
                     },

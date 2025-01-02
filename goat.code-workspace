@@ -99,6 +99,10 @@
             "path": "./typescript/packages/plugins/renzo"
         },
         {
+            "name": "[Plugin] 🗿 ironclad",
+            "path": "./typescript/packages/plugins/ironclad"
+        },
+        {
             "name": "[Plugin] 🦄 uniswap",
             "path": "./typescript/packages/plugins/uniswap"
         },
