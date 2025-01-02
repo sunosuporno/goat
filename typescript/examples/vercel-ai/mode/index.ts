@@ -11,13 +11,16 @@ import { mode } from "viem/chains";
 import { getOnChainTools } from "@goat-sdk/adapter-vercel-ai";
 import { MODE, USDC, erc20 } from "@goat-sdk/plugin-erc20";
 import { kim } from "@goat-sdk/plugin-kim";
+import { modeVoting } from "@goat-sdk/plugin-mode-voting";
 
 import { sendETH } from "@goat-sdk/wallet-evm";
 import { viem } from "@goat-sdk/wallet-viem";
 
 require("dotenv").config();
 
-const account = privateKeyToAccount(process.env.WALLET_PRIVATE_KEY as `0x${string}`);
+const account = privateKeyToAccount(
+    process.env.WALLET_PRIVATE_KEY as `0x${string}`
+);
 
 const walletClient = createWalletClient({
     account: account,
@@ -28,7 +31,12 @@ const walletClient = createWalletClient({
 (async () => {
     const tools = await getOnChainTools({
         wallet: viem(walletClient),
-        plugins: [sendETH(), erc20({ tokens: [USDC, MODE] }), kim()],
+        plugins: [
+            sendETH(),
+            erc20({ tokens: [USDC, MODE] }),
+            kim(),
+            modeVoting(),
+        ],
     });
 
     const rl = readline.createInterface({

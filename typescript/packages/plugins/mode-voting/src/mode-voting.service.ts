@@ -47,7 +47,7 @@ export class ModeVotingService {
     async getAllGauges(
         walletClient: EVMWalletClient,
         parameters: GetAllGaugesParameters
-    ): Promise<string[]> {
+    ): Promise<{ voterType: keyof typeof VOTER_ADDRESSES; gauges: string[] }> {
         try {
             console.log(`[Mode Voting] ====== Getting All Gauges ======`);
             console.log(`[Mode Voting] Voter Type: ${parameters.voterType}`);
@@ -66,7 +66,10 @@ export class ModeVotingService {
             console.log(
                 `[Mode Voting] ✅ Found ${gauges.length} gauges for ${parameters.voterType}`
             );
-            return gauges;
+            return {
+                voterType: parameters.voterType,
+                gauges: gauges,
+            };
         } catch (error) {
             console.error(
                 `[Mode Voting] ❌ Error getting gauges for ${parameters.voterType}:`,
@@ -98,8 +101,16 @@ export class ModeVotingService {
                 functionName: "getGauge",
                 args: [parameters.gaugeAddress],
             });
+
+            console.log("[Mode Voting] Raw gauge data:", gaugeDataResult);
             const gaugeData = (
-                gaugeDataResult as { value: [boolean, bigint, string] }
+                gaugeDataResult as {
+                    value: {
+                        active: boolean;
+                        created: bigint;
+                        metadataURI: string;
+                    };
+                }
             ).value;
 
             const votesResult = await walletClient.read({
@@ -108,13 +119,14 @@ export class ModeVotingService {
                 functionName: "gaugeVotes",
                 args: [parameters.gaugeAddress],
             });
+            console.log("[Mode Voting] Raw votes data:", votesResult);
             const votes = (votesResult as { value: bigint }).value;
 
             const gaugeInfo: GaugeInfo = {
                 address: parameters.gaugeAddress,
-                active: gaugeData[0],
-                created: Number(gaugeData[1]),
-                metadataURI: gaugeData[2],
+                active: gaugeData.active,
+                created: Number(gaugeData.created),
+                metadataURI: gaugeData.metadataURI,
                 totalVotes: votes.toString(),
             };
 
