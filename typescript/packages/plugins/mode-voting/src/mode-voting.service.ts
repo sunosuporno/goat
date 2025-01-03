@@ -84,11 +84,6 @@ export class ModeVotingService {
         parameters: GetGaugeInfoParameters
     ): Promise<GaugeInfo> {
         try {
-            console.log(`[Mode Voting] ====== Getting Gauge Info ======`);
-            console.log(
-                `[Mode Voting] Gauge Address: ${parameters.gaugeAddress}`
-            );
-
             const gaugeDataResult = await walletClient.read({
                 address: VOTER_ADDRESSES[parameters.voterType] as `0x${string}`,
                 abi: GAUGE_VOTER_ABI,
@@ -96,7 +91,6 @@ export class ModeVotingService {
                 args: [parameters.gaugeAddress],
             });
 
-            console.log("[Mode Voting] Raw gauge data:", gaugeDataResult);
             const gaugeData = (
                 gaugeDataResult as {
                     value: {
