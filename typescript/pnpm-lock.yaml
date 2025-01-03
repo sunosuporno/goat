@@ -530,9 +530,6 @@ importers:
       '@goat-sdk/plugin-kim':
         specifier: workspace:*
         version: link:../../../packages/plugins/kim
-      '@goat-sdk/plugin-mode-voting':
-        specifier: workspace:*
-        version: link:../../../packages/plugins/mode-voting
       '@goat-sdk/wallet-evm':
         specifier: workspace:*
         version: link:../../../packages/wallets/evm
