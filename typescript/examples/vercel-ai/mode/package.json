@@ -1,6 +1,6 @@
 {
     "name": "goat-examples-vercel-ai-mode",
-    "version": "0.2.6",
+    "version": "0.2.7",
     "description": "",
     "private": true,
     "scripts": {
@@ -15,7 +15,6 @@
         "@goat-sdk/plugin-erc20": "workspace:*",
         "@goat-sdk/plugin-erc721": "workspace:*",
         "@goat-sdk/plugin-kim": "workspace:*",
-        "@goat-sdk/plugin-mode-voting": "workspace:*",
         "@goat-sdk/wallet-evm": "workspace:*",
         "@goat-sdk/wallet-viem": "workspace:*",
         "ai": "catalog:",
