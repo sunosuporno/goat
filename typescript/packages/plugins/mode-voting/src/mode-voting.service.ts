@@ -10,7 +10,7 @@ import {
 import { GAUGE_VOTER_ABI } from "./abi/gaugeVoter";
 import { CLOCK_ABI } from "./abi/clock";
 import { VOTING_ESCROW_ABI } from "./abi/votingEscrow";
-
+import { ESCROW_CURVE_ABI } from "./abi/escrowCurve";
 // Contract addresses for different voter types
 const VOTER_ADDRESSES = {
     veMODE: "0x71439Ae82068E19ea90e4F506c74936aE170Cf58",
@@ -25,6 +25,11 @@ const CLOCK_ADDRESSES = {
 const VOTING_ESCROW_ADDRESSES = {
     veMODE: "0xff8AB822b8A853b01F9a9E9465321d6Fe77c9D2F",
     veBPT: "0x9c2eFe2a1FBfb601125Bb07a3D5bC6EC91F91e01",
+} as const;
+
+const ESCROW_CURVE_ADDRESSES = {
+    veMODE: "0x69E57EE7782701DdA44b170Df5b1244C6F02e89b",
+    veBPT: "0xf597bcF98E79A3B4c92FA70Eb0c6C47DA0f84Fba",
 } as const;
 
 // Interface for gauge information
@@ -49,11 +54,7 @@ export class ModeVotingService {
         parameters: GetAllGaugesParameters
     ): Promise<{ voterType: keyof typeof VOTER_ADDRESSES; gauges: string[] }> {
         try {
-            console.log(`[Mode Voting] ====== Getting All Gauges ======`);
-            console.log(`[Mode Voting] Voter Type: ${parameters.voterType}`);
-
             const voterAddress = VOTER_ADDRESSES[parameters.voterType];
-            console.log(`[Mode Voting] Using voter contract: ${voterAddress}`);
 
             const gaugesResult = await walletClient.read({
                 address: voterAddress as `0x${string}`,
@@ -63,18 +64,11 @@ export class ModeVotingService {
             });
             const gauges = (gaugesResult as { value: string[] }).value;
 
-            console.log(
-                `[Mode Voting] ✅ Found ${gauges.length} gauges for ${parameters.voterType}`
-            );
             return {
                 voterType: parameters.voterType,
                 gauges: gauges,
             };
         } catch (error) {
-            console.error(
-                `[Mode Voting] ❌ Error getting gauges for ${parameters.voterType}:`,
-                error
-            );
             throw Error(
                 `Failed to get gauges for ${parameters.voterType}: ${error}`
             );
@@ -119,7 +113,6 @@ export class ModeVotingService {
                 functionName: "gaugeVotes",
                 args: [parameters.gaugeAddress],
             });
-            console.log("[Mode Voting] Raw votes data:", votesResult);
             const votes = (votesResult as { value: bigint }).value;
 
             const gaugeInfo: GaugeInfo = {
@@ -130,10 +123,8 @@ export class ModeVotingService {
                 totalVotes: votes.toString(),
             };
 
-            console.log(`[Mode Voting] ✅ Successfully retrieved gauge info`);
             return gaugeInfo;
         } catch (error) {
-            console.error(`[Mode Voting] ❌ Error getting gauge info:`, error);
             throw Error(`Failed to get gauge info: ${error}`);
         }
     }
@@ -148,12 +139,8 @@ export class ModeVotingService {
         parameters: VoteOnGaugesParameters
     ): Promise<string> {
         try {
-            console.log(`[Mode Voting] ====== Voting on Gauges ======`);
-            console.log(`[Mode Voting] Voter Type: ${parameters.voterType}`);
-
             // Check if voting is active
             const clockAddress = CLOCK_ADDRESSES[parameters.voterType];
-            console.log(`[Mode Voting] Using clock contract: ${clockAddress}`);
 
             const votingActiveResult = await walletClient.read({
                 address: clockAddress as `0x${string}`,
@@ -171,11 +158,6 @@ export class ModeVotingService {
             // Verify NFT ownership and get voting power
             const voterAddress = VOTER_ADDRESSES[parameters.voterType];
             const escrowAddress = VOTING_ESCROW_ADDRESSES[parameters.voterType];
-
-            console.log(`[Mode Voting] Using voter contract: ${voterAddress}`);
-            console.log(
-                `[Mode Voting] Using escrow contract: ${escrowAddress}`
-            );
 
             const isApprovedResult = await walletClient.read({
                 address: escrowAddress as `0x${string}`,
@@ -212,12 +194,8 @@ export class ModeVotingService {
                 args: [parameters.tokenId, votes],
             });
 
-            console.log(
-                `[Mode Voting] ✅ Successfully voted on gauges: ${txHash.hash}`
-            );
             return `Successfully voted with NFT ${parameters.tokenId}. Transaction: ${txHash.hash}`;
         } catch (error) {
-            console.error(`[Mode Voting] ❌ Error voting on gauges:`, error);
             throw Error(`Failed to vote on gauges: ${error}`);
         }
     }
@@ -232,11 +210,7 @@ export class ModeVotingService {
         parameters: ChangeVotesParameters
     ): Promise<string> {
         try {
-            console.log(`[Mode Voting] ====== Changing Votes ======`);
-            console.log(`[Mode Voting] Voter Type: ${parameters.voterType}`);
-
             const voterAddress = VOTER_ADDRESSES[parameters.voterType];
-            console.log(`[Mode Voting] Using voter contract: ${voterAddress}`);
 
             // First reset existing votes
             const resetTx = await walletClient.sendTransaction({
@@ -245,8 +219,6 @@ export class ModeVotingService {
                 functionName: "reset",
                 args: [parameters.tokenId],
             });
-
-            console.log(`[Mode Voting] ✅ Reset votes: ${resetTx.hash}`);
 
             // Verify votes have been reset by checking usedVotingPower
             const votingPowerResult = await walletClient.read({
@@ -286,11 +258,8 @@ export class ModeVotingService {
                 functionName: "vote",
                 args: [parameters.tokenId, votes],
             });
-
-            console.log(`[Mode Voting] ✅ Changed votes: ${voteTx.hash}`);
             return `Successfully changed votes for NFT ${parameters.tokenId}. Reset tx: ${resetTx.hash}, Vote tx: ${voteTx.hash}`;
         } catch (error) {
-            console.error(`[Mode Voting] ❌ Error changing votes:`, error);
             throw Error(`Failed to change votes: ${error}`);
         }
     }
@@ -309,24 +278,19 @@ export class ModeVotingService {
         remainingVotingPower: string;
     }> {
         try {
-            console.log(`[Mode Voting] ====== Getting Voting Power ======`);
-            console.log(`[Mode Voting] Voter Type: ${parameters.voterType}`);
-
             const escrowAddress = VOTING_ESCROW_ADDRESSES[parameters.voterType];
-            console.log(
-                `[Mode Voting] Using escrow contract: ${escrowAddress}`
-            );
 
-            // Get total voting power
             const votingPowerResult = await walletClient.read({
                 address: escrowAddress as `0x${string}`,
                 abi: VOTING_ESCROW_ABI,
-                functionName: "balanceOf",
-                args: [parameters.tokenId],
+                functionName: "votingPowerAt",
+                args: [
+                    parameters.tokenId,
+                    BigInt(Math.floor(Date.now() / 1000)),
+                ],
             });
             const votingPower = (votingPowerResult as { value: bigint }).value;
 
-            // Get used voting power
             const voterAddress = VOTER_ADDRESSES[parameters.voterType];
             const usedVotingPowerResult = await walletClient.read({
                 address: voterAddress as `0x${string}`,
@@ -337,19 +301,17 @@ export class ModeVotingService {
             const usedVotingPower = (usedVotingPowerResult as { value: bigint })
                 .value;
 
-            console.log(`[Mode Voting] ✅ Successfully retrieved voting power`);
+            const DECIMALS = BigInt(10 ** 18);
+
             return {
-                totalVotingPower: votingPower.toString(),
-                usedVotingPower: usedVotingPower.toString(),
+                totalVotingPower: (votingPower / DECIMALS).toString(),
+                usedVotingPower: (usedVotingPower / DECIMALS).toString(),
                 remainingVotingPower: (
-                    votingPower - usedVotingPower
+                    (votingPower - usedVotingPower) /
+                    DECIMALS
                 ).toString(),
             };
         } catch (error) {
-            console.error(
-                `[Mode Voting] ❌ Error getting voting power:`,
-                error
-            );
             throw Error(`Failed to get voting power: ${error}`);
         }
     }
