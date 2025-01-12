@@ -1,16 +1,16 @@
 import { Tool } from "@goat-sdk/core";
 import { EVMWalletClient } from "@goat-sdk/wallet-evm";
+import { CLOCK_ABI } from "./abi/clock";
+import { ESCROW_CURVE_ABI } from "./abi/escrowCurve";
+import { GAUGE_VOTER_ABI } from "./abi/gaugeVoter";
+import { VOTING_ESCROW_ABI } from "./abi/votingEscrow";
 import {
+    ChangeVotesParameters,
     GetAllGaugesParameters,
     GetGaugeInfoParameters,
-    VoteOnGaugesParameters,
-    ChangeVotesParameters,
     GetVotingPowerParameters,
+    VoteOnGaugesParameters,
 } from "./parameters";
-import { GAUGE_VOTER_ABI } from "./abi/gaugeVoter";
-import { CLOCK_ABI } from "./abi/clock";
-import { VOTING_ESCROW_ABI } from "./abi/votingEscrow";
-import { ESCROW_CURVE_ABI } from "./abi/escrowCurve";
 // Contract addresses for different voter types
 const VOTER_ADDRESSES = {
     veMODE: "0x71439Ae82068E19ea90e4F506c74936aE170Cf58",
@@ -42,8 +42,6 @@ interface GaugeInfo {
 }
 
 export class ModeVotingService {
-    constructor() {}
-
     @Tool({
         name: "get_all_gauges_mode",
         description:
@@ -51,7 +49,7 @@ export class ModeVotingService {
     })
     async getAllGauges(
         walletClient: EVMWalletClient,
-        parameters: GetAllGaugesParameters
+        parameters: GetAllGaugesParameters,
     ): Promise<{ voterType: keyof typeof VOTER_ADDRESSES; gauges: string[] }> {
         try {
             const voterAddress = VOTER_ADDRESSES[parameters.voterType];
@@ -69,9 +67,7 @@ export class ModeVotingService {
                 gauges: gauges,
             };
         } catch (error) {
-            throw Error(
-                `Failed to get gauges for ${parameters.voterType}: ${error}`
-            );
+            throw Error(`Failed to get gauges for ${parameters.voterType}: ${error}`);
         }
     }
 
@@ -79,10 +75,7 @@ export class ModeVotingService {
         name: "get_gauge_info_mode",
         description: "Get detailed information about a specific gauge",
     })
-    async getGaugeInfo(
-        walletClient: EVMWalletClient,
-        parameters: GetGaugeInfoParameters
-    ): Promise<GaugeInfo> {
+    async getGaugeInfo(walletClient: EVMWalletClient, parameters: GetGaugeInfoParameters): Promise<GaugeInfo> {
         try {
             const gaugeDataResult = await walletClient.read({
                 address: VOTER_ADDRESSES[parameters.voterType] as `0x${string}`,
@@ -125,13 +118,9 @@ export class ModeVotingService {
 
     @Tool({
         name: "vote_on_gauges_mode",
-        description:
-            "Vote on multiple gauges using your veNFT voting power. The sum of weights must equal 100.",
+        description: "Vote on multiple gauges using your veNFT voting power. The sum of weights must equal 100.",
     })
-    async voteOnGauges(
-        walletClient: EVMWalletClient,
-        parameters: VoteOnGaugesParameters
-    ): Promise<string> {
+    async voteOnGauges(walletClient: EVMWalletClient, parameters: VoteOnGaugesParameters): Promise<string> {
         try {
             // Check if voting is active
             const clockAddress = CLOCK_ADDRESSES[parameters.voterType];
@@ -142,8 +131,7 @@ export class ModeVotingService {
                 functionName: "votingActive",
                 args: [],
             });
-            const isVotingActive = (votingActiveResult as { value: boolean })
-                .value;
+            const isVotingActive = (votingActiveResult as { value: boolean }).value;
 
             if (!isVotingActive) {
                 throw new Error("Voting is not currently active");
@@ -172,10 +160,7 @@ export class ModeVotingService {
             }));
 
             // Sum of weights validation
-            const totalWeight = votes.reduce(
-                (sum, vote) => sum + BigInt(vote.weight),
-                0n
-            );
+            const totalWeight = votes.reduce((sum, vote) => sum + BigInt(vote.weight), 0n);
             if (totalWeight !== 100n) {
                 throw new Error("Total vote weight must equal 100");
             }
@@ -196,13 +181,9 @@ export class ModeVotingService {
 
     @Tool({
         name: "change_votes_mode",
-        description:
-            "Change existing votes for a veNFT. Must reset existing votes first.",
+        description: "Change existing votes for a veNFT. Must reset existing votes first.",
     })
-    async changeVotes(
-        walletClient: EVMWalletClient,
-        parameters: ChangeVotesParameters
-    ): Promise<string> {
+    async changeVotes(walletClient: EVMWalletClient, parameters: ChangeVotesParameters): Promise<string> {
         try {
             const voterAddress = VOTER_ADDRESSES[parameters.voterType];
 
@@ -221,13 +202,10 @@ export class ModeVotingService {
                 functionName: "usedVotingPower",
                 args: [parameters.tokenId],
             });
-            const usedVotingPower = (votingPowerResult as { value: bigint })
-                .value;
+            const usedVotingPower = (votingPowerResult as { value: bigint }).value;
 
             if (usedVotingPower !== 0n) {
-                throw new Error(
-                    "Failed to reset votes - voting power not cleared"
-                );
+                throw new Error("Failed to reset votes - voting power not cleared");
             }
 
             // Now submit new votes
@@ -237,10 +215,7 @@ export class ModeVotingService {
             }));
 
             // Sum of weights validation
-            const totalWeight = votes.reduce(
-                (sum, vote) => sum + BigInt(vote.weight),
-                0n
-            );
+            const totalWeight = votes.reduce((sum, vote) => sum + BigInt(vote.weight), 0n);
             if (totalWeight !== 100n) {
                 throw new Error("Total vote weight must equal 100");
             }
@@ -260,12 +235,11 @@ export class ModeVotingService {
 
     @Tool({
         name: "get_voting_power_mode",
-        description:
-            "Get the current voting power for a specific veNFT token ID",
+        description: "Get the current voting power for a specific veNFT token ID",
     })
     async getVotingPower(
         walletClient: EVMWalletClient,
-        parameters: GetVotingPowerParameters
+        parameters: GetVotingPowerParameters,
     ): Promise<{
         totalVotingPower: string;
         usedVotingPower: string;
@@ -278,10 +252,7 @@ export class ModeVotingService {
                 address: escrowAddress as `0x${string}`,
                 abi: VOTING_ESCROW_ABI,
                 functionName: "votingPowerAt",
-                args: [
-                    parameters.tokenId,
-                    BigInt(Math.floor(Date.now() / 1000)),
-                ],
+                args: [parameters.tokenId, BigInt(Math.floor(Date.now() / 1000))],
             });
             const votingPower = (votingPowerResult as { value: bigint }).value;
 
@@ -292,18 +263,14 @@ export class ModeVotingService {
                 functionName: "usedVotingPower",
                 args: [parameters.tokenId],
             });
-            const usedVotingPower = (usedVotingPowerResult as { value: bigint })
-                .value;
+            const usedVotingPower = (usedVotingPowerResult as { value: bigint }).value;
 
             const DECIMALS = BigInt(10 ** 18);
 
             return {
                 totalVotingPower: (votingPower / DECIMALS).toString(),
                 usedVotingPower: (usedVotingPower / DECIMALS).toString(),
-                remainingVotingPower: (
-                    (votingPower - usedVotingPower) /
-                    DECIMALS
-                ).toString(),
+                remainingVotingPower: ((votingPower - usedVotingPower) / DECIMALS).toString(),
             };
         } catch (error) {
             throw Error(`Failed to get voting power: ${error}`);

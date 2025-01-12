@@ -10,8 +10,7 @@ export class ModeVotingPlugin extends PluginBase<EVMWalletClient> {
         super("mode-voting", [new ModeVotingService()]);
     }
 
-    supportsChain = (chain: Chain) =>
-        chain.type === "evm" && SUPPORTED_CHAINS.some((c) => c.id === chain.id);
+    supportsChain = (chain: Chain) => chain.type === "evm" && SUPPORTED_CHAINS.some((c) => c.id === chain.id);
 }
 
 export const modeVoting = () => new ModeVotingPlugin();
