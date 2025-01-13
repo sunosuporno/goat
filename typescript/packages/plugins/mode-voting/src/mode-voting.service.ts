@@ -1,7 +1,6 @@
 import { Tool } from "@goat-sdk/core";
 import { EVMWalletClient } from "@goat-sdk/wallet-evm";
 import { CLOCK_ABI } from "./abi/clock";
-import { ESCROW_CURVE_ABI } from "./abi/escrowCurve";
 import { GAUGE_VOTER_ABI } from "./abi/gaugeVoter";
 import { VOTING_ESCROW_ABI } from "./abi/votingEscrow";
 import {
