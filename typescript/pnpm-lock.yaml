@@ -737,9 +737,6 @@ importers:
       '@goat-sdk/plugin-kim':
         specifier: workspace:*
         version: link:../../../packages/plugins/kim
-      '@goat-sdk/plugin-token-info':
-        specifier: workspace:*
-        version: link:../../../packages/plugins/token-info
       '@goat-sdk/wallet-evm':
         specifier: workspace:*
         version: link:../../../packages/wallets/evm

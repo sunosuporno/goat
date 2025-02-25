@@ -6,4 +6,3 @@ export class TokenInfoParameters extends createToolParameters(
         symbol: z.string().min(1),
     }),
 ) {}
-
