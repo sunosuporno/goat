@@ -1,42 +1,26 @@
 import { Tool } from "@goat-sdk/core";
 import { EVMWalletClient } from "@goat-sdk/wallet-evm";
-import { parseUnits, formatUnits } from "viem";
-import {
-    OpenIncreasePositionParams,
-    CloseDecreasePositionParams,
-    GetPositionParams,
-} from "./parameters";
-import { ROUTER_ABI } from "./abi/router";
-import { POSITION_ROUTER_ABI } from "./abi/positionRouter";
+import { formatUnits } from "viem";
 import { ERC20_ABI } from "./abi/erc20";
+import { POSITION_ROUTER_ABI } from "./abi/positionRouter";
+import { ROUTER_ABI } from "./abi/router";
 import { VAULT_ABI } from "./abi/vault";
+import { CloseDecreasePositionParams, GetPositionParams, OpenIncreasePositionParams } from "./parameters";
 
 const BMX_ROUTER_ADDRESS = "0xAa40201575140862E9aE4F00515245670582e6e0";
-const BMX_POSITION_ROUTER_ADDRESS =
-    "0x6D6ec3bd7c94ab35e7a0a6FdA864EE35eB9fAE04";
+const BMX_POSITION_ROUTER_ADDRESS = "0x6D6ec3bd7c94ab35e7a0a6FdA864EE35eB9fAE04";
 const BMX_VAULT_ADDRESS = "0xff745bdB76AfCBa9d3ACdCd71664D4250Ef1ae49";
-const REFERRAL_CODE =
-    "0x0000000000000000000000000000000000000000000000000000000000000000";
+const REFERRAL_CODE = "0x0000000000000000000000000000000000000000000000000000000000000000";
 const CALLBACK_ADDRESS = "0x0000000000000000000000000000000000000000";
 const USDC_ADDRESS = "0xd988097fb8612cc24eeC14542bC03424c656005f";
 
 export class BmxService {
     @Tool({
         name: "open_increase_position",
-        description:
-            "Open or increase a long or short position on BMX with specified parameters",
+        description: "Open or increase a long or short position on BMX with specified parameters",
     })
-    async openIncreasePosition(
-        walletClient: EVMWalletClient,
-        parameters: OpenIncreasePositionParams,
-    ): Promise<string> {
-        const {
-            indexToken,
-            amountIn,
-            leverage,
-            isLong,
-            referralCode = REFERRAL_CODE,
-        } = parameters;
+    async openIncreasePosition(walletClient: EVMWalletClient, parameters: OpenIncreasePositionParams): Promise<string> {
+        const { indexToken, amountIn, leverage, isLong, referralCode = REFERRAL_CODE } = parameters;
 
         // Get token decimals
         const tokenDecimals = await walletClient.read({
@@ -58,10 +42,8 @@ export class BmxService {
         // Calculate sizeDelta in USD
         const amountInBigInt = BigInt(amountIn);
         const sizeDelta = isLong
-            ? (amountInBigInt * tokenPriceValue * BigInt(leverage)) /
-              BigInt(10 ** tokenDecimalsValue)
-            : (amountInBigInt * BigInt(leverage) * BigInt(1e30)) /
-              BigInt(10 ** tokenDecimalsValue);
+            ? (amountInBigInt * tokenPriceValue * BigInt(leverage)) / BigInt(10 ** tokenDecimalsValue)
+            : (amountInBigInt * BigInt(leverage) * BigInt(1e30)) / BigInt(10 ** tokenDecimalsValue);
         const sizeDeltaValue = sizeDelta; // Using USDC decimals from earlier
 
         // Calculate acceptable price with 0.5% buffer
@@ -100,8 +82,7 @@ export class BmxService {
             abi: POSITION_ROUTER_ABI,
             functionName: "minExecutionFee",
         });
-        const minExecutionFeeParsed = (minExecutionFee as { value: bigint })
-            .value;
+        const minExecutionFeeParsed = (minExecutionFee as { value: bigint }).value;
         const tx = await walletClient.sendTransaction({
             to: BMX_POSITION_ROUTER_ADDRESS,
             abi: POSITION_ROUTER_ABI,
@@ -126,43 +107,22 @@ export class BmxService {
 
     @Tool({
         name: "close_decrease_position",
-        description:
-            "Close or decrease a long or short position on BMX with specified parameters",
+        description: "Close or decrease a long or short position on BMX with specified parameters",
     })
     async closeDecreasePosition(
         walletClient: EVMWalletClient,
         parameters: CloseDecreasePositionParams,
     ): Promise<string> {
-        const {
-            indexToken,
-            percentage,
-            isLong,
-            referralCode = REFERRAL_CODE,
-        } = parameters;
+        const { indexToken, percentage, isLong, referralCode = REFERRAL_CODE } = parameters;
 
         // Get current position details
         const position = (await walletClient.read({
             address: BMX_VAULT_ADDRESS,
             abi: VAULT_ABI,
             functionName: "getPosition",
-            args: [
-                walletClient.getAddress(),
-                isLong ? indexToken : USDC_ADDRESS,
-                indexToken,
-                isLong,
-            ],
+            args: [walletClient.getAddress(), isLong ? indexToken : USDC_ADDRESS, indexToken, isLong],
         })) as {
-            value: [
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-            ];
+            value: [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint];
         };
 
         const currentSize = position.value[0];
@@ -170,8 +130,7 @@ export class BmxService {
 
         // Calculate deltas based on percentage
         const sizeDelta = (currentSize * BigInt(percentage)) / BigInt(100);
-        const collateralDelta =
-            (currentCollateral * BigInt(percentage)) / BigInt(100);
+        const collateralDelta = (currentCollateral * BigInt(percentage)) / BigInt(100);
 
         // Get token price from Vault - use getMinPrice for both long and short when closing
         const tokenPrice = await walletClient.read({
@@ -192,8 +151,7 @@ export class BmxService {
             abi: POSITION_ROUTER_ABI,
             functionName: "minExecutionFee",
         });
-        const minExecutionFeeParsed = (minExecutionFee as { value: bigint })
-            .value;
+        const minExecutionFeeParsed = (minExecutionFee as { value: bigint }).value;
 
         // Create the decrease position transaction
         const tx = await walletClient.sendTransaction({
@@ -223,10 +181,7 @@ export class BmxService {
         name: "get_position",
         description: "View current position details for a specific token",
     })
-    async getPosition(
-        walletClient: EVMWalletClient,
-        parameters: GetPositionParams,
-    ): Promise<string> {
+    async getPosition(walletClient: EVMWalletClient, parameters: GetPositionParams): Promise<string> {
         const { indexToken, isLong } = parameters;
 
         // Get position details
@@ -241,17 +196,7 @@ export class BmxService {
                 isLong,
             ],
         })) as {
-            value: [
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-                bigint,
-            ];
+            value: [bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint];
         };
 
         // Based on docs, values are in this order:
@@ -269,15 +214,13 @@ export class BmxService {
 
         // Format the position details
         const formattedPosition = {
-            size: formatUnits(size, 30).toString() + " USD",
-            collateral: formatUnits(collateral, 30).toString() + " USD",
-            averagePrice: formatUnits(averagePrice, 30).toString() + " USD",
-            realisedPnl: formatUnits(realisedPnl, 30).toString() + " USD",
+            size: `${formatUnits(size, 30).toString()} USD`,
+            collateral: `${formatUnits(collateral, 30).toString()} USD`,
+            averagePrice: `${formatUnits(averagePrice, 30).toString()} USD`,
+            realisedPnl: `${formatUnits(realisedPnl, 30).toString()} USD`,
             lastIncreasedTime:
                 Number(lastIncreasedTime) > 1600000000
-                    ? new Date(
-                          Number(lastIncreasedTime) * 1000,
-                      ).toLocaleString()
+                    ? new Date(Number(lastIncreasedTime) * 1000).toLocaleString()
                     : "No position increases yet",
             hasProfit: Boolean(hasProfit),
         };

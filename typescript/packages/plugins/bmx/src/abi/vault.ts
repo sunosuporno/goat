@@ -1554,9 +1554,7 @@ export const VAULT_ABI = [
         type: "function",
     },
     {
-        inputs: [
-            { internalType: "bool", name: "_inManagerMode", type: "bool" },
-        ],
+        inputs: [{ internalType: "bool", name: "_inManagerMode", type: "bool" }],
         name: "setInManagerMode",
         outputs: [],
         stateMutability: "nonpayable",
@@ -1576,18 +1574,14 @@ export const VAULT_ABI = [
         type: "function",
     },
     {
-        inputs: [
-            { internalType: "bool", name: "_isLeverageEnabled", type: "bool" },
-        ],
+        inputs: [{ internalType: "bool", name: "_isLeverageEnabled", type: "bool" }],
         name: "setIsLeverageEnabled",
         outputs: [],
         stateMutability: "nonpayable",
         type: "function",
     },
     {
-        inputs: [
-            { internalType: "bool", name: "_isSwapEnabled", type: "bool" },
-        ],
+        inputs: [{ internalType: "bool", name: "_isSwapEnabled", type: "bool" }],
         name: "setIsSwapEnabled",
         outputs: [],
         stateMutability: "nonpayable",
@@ -1614,9 +1608,7 @@ export const VAULT_ABI = [
         type: "function",
     },
     {
-        inputs: [
-            { internalType: "uint256", name: "_maxGasPrice", type: "uint256" },
-        ],
+        inputs: [{ internalType: "uint256", name: "_maxGasPrice", type: "uint256" }],
         name: "setMaxGasPrice",
         outputs: [],
         stateMutability: "nonpayable",
@@ -1633,18 +1625,14 @@ export const VAULT_ABI = [
         type: "function",
     },
     {
-        inputs: [
-            { internalType: "uint256", name: "_maxLeverage", type: "uint256" },
-        ],
+        inputs: [{ internalType: "uint256", name: "_maxLeverage", type: "uint256" }],
         name: "setMaxLeverage",
         outputs: [],
         stateMutability: "nonpayable",
         type: "function",
     },
     {
-        inputs: [
-            { internalType: "address", name: "_priceFeed", type: "address" },
-        ],
+        inputs: [{ internalType: "address", name: "_priceFeed", type: "address" }],
         name: "setPriceFeed",
         outputs: [],
         stateMutability: "nonpayable",
@@ -1894,9 +1882,7 @@ export const VAULT_ABI = [
     {
         inputs: [],
         name: "vaultUtils",
-        outputs: [
-            { internalType: "contract IVaultUtils", name: "", type: "address" },
-        ],
+        outputs: [{ internalType: "contract IVaultUtils", name: "", type: "address" }],
         stateMutability: "view",
         type: "function",
     },

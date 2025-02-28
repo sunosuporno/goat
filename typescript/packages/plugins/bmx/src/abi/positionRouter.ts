@@ -1291,9 +1291,7 @@ export const POSITION_ROUTER_ABI = [
         type: "function",
     },
     {
-        inputs: [
-            { internalType: "uint256", name: "_depositFee", type: "uint256" },
-        ],
+        inputs: [{ internalType: "uint256", name: "_depositFee", type: "uint256" }],
         name: "setDepositFee",
         outputs: [],
         stateMutability: "nonpayable",
@@ -1320,9 +1318,7 @@ export const POSITION_ROUTER_ABI = [
         type: "function",
     },
     {
-        inputs: [
-            { internalType: "bool", name: "_isLeverageEnabled", type: "bool" },
-        ],
+        inputs: [{ internalType: "bool", name: "_isLeverageEnabled", type: "bool" }],
         name: "setIsLeverageEnabled",
         outputs: [],
         stateMutability: "nonpayable",

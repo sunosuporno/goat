@@ -10,8 +10,7 @@ export class BmxPlugin extends PluginBase<EVMWalletClient> {
         super("bmx", [new BmxService()]);
     }
 
-    supportsChain = (chain: Chain) =>
-        chain.type === "evm" && SUPPORTED_CHAINS.some((c) => c.id === chain.id);
+    supportsChain = (chain: Chain) => chain.type === "evm" && SUPPORTED_CHAINS.some((c) => c.id === chain.id);
 }
 
 export const bmx = () => new BmxPlugin();
