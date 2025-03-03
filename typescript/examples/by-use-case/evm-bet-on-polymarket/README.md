@@ -42,9 +42,9 @@ cp .env.template .env
 - `RPC_PROVIDER_URL`
 
 The following values will be populated in the next step:
-  - `POLYMARKET_API_KEY`: Your Polymarket API key (UUID format)
-  - `POLYMARKET_SECRET`: Your Polymarket API secret (Base64 encoded)
-  - `POLYMARKET_PASSPHRASE`: Your Polymarket API passphrase
+  - `POLYMARKET_API_KEY`
+  - `POLYMARKET_SECRET`
+  - `POLYMARKET_PASSPHRASE`
 
 5. Create an API key for your wallet using Polymarket's API key creation tool:
 ```bash
