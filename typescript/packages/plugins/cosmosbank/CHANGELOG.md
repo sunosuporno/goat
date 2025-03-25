@@ -1,5 +1,11 @@
 # @goat-sdk/plugin-cosmosbank
 
+## 0.0.7
+
+### Patch Changes
+
+- 4bf42bd: Upgrade node version
+
 ## 0.0.6
 
 ### Patch Changes

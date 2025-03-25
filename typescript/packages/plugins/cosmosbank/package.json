@@ -1,6 +1,6 @@
 {
     "name": "@goat-sdk/plugin-cosmosbank",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "files": ["dist/**/*", "README.md", "package.json"],
     "scripts": {
         "build": "tsup",
@@ -25,7 +25,7 @@
         "cosmjs-types": "^0.9.0"
     },
     "engines": {
-        "node": ">=20.12.2 <21",
+        "node": ">=20.12.2",
         "npm": "please-use-pnpm",
         "pnpm": ">=9",
         "yarn": "please-use-pnpm"
