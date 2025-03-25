@@ -27,8 +27,7 @@ export class LifiPlugin extends PluginBase<EVMWalletClient> {
         super("lifi", [new LifiService(params.apiKey)]);
     }
 
-    supportsChain = (chain: Chain) =>
-        chain.type === "evm" && supportedChains.includes(chain.id.toString());
+    supportsChain = (chain: Chain) => chain.type === "evm" && supportedChains.includes(chain.id.toString());
 }
 
 export const lifi = (params: LifiCtorParams = {}) => new LifiPlugin(params);

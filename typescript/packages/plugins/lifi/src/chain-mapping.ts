@@ -18,9 +18,7 @@ export function getChainId(chainName: string): number {
     const chainId = chainNameToId[normalizedName];
 
     if (!chainId) {
-        throw new Error(
-            `Unsupported chain name: ${chainName}. Please check the chain name and try again.`
-        );
+        throw new Error(`Unsupported chain name: ${chainName}. Please check the chain name and try again.`);
     }
 
     return chainId;
